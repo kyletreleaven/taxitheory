@@ -17,6 +17,3 @@ def sample_demands( T, rategraph, roadnet, rate='rate' ) :
     script = sorted( zip( times, demands ) )
     return script
 
-
-
-

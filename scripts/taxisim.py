@@ -9,7 +9,9 @@ import setiptah.taxitheory.gui.mplcanvas as mplcanvas
 from setiptah.eventsim.simulation import Simulation
 from setiptah.queuesim.sources import PoissonClock, UniformClock
 from setiptah.dyvehr.euclidean import EuclideanPlanner
-from setiptah.dyvehr.taxi import Taxi, GatedTaxiDispatch, kCraneScheduler
+#
+from setiptah.dyvehr.taxi import Taxi, GatedTaxiDispatch
+from setiptah.dyvehr.taxi import RoundRobinScheduler, kCraneScheduler
 
 
 class SimResults : pass
@@ -28,6 +30,7 @@ class SimDialog(gui.QDialog) :
         self.canvas = mplcanvas.MplCanvas()
         
         self.durationBox = gui.QDoubleSpinBox()
+        self.durationBox.setMaximum( 10000. )
         self.durationBox.setValue( 50. )
         self.durationBox.setSingleStep( 10. )
         
@@ -92,7 +95,7 @@ class SimDialog(gui.QDialog) :
         
         
     def updatePlot(self) :
-        print 'SIMULATION FINISHED'
+        #print 'SIMULATION FINISHED'
         fig = self.canvas.getFigure()
         fig.clear()
         ax = fig.add_subplot(1,1,1)
@@ -155,6 +158,7 @@ class SimulateThread(core.QThread) :
             scheduler = kCraneScheduler( getTail, getHead, distance )
             
         else :
+            import setiptah.roadgeometry.roadmap_basic as ROAD
             import setiptah.roadgeometry.probability as roadprob
             from setiptah.roadgeometry.roadmap_paths import RoadmapPlanner
             
@@ -164,8 +168,16 @@ class SimulateThread(core.QThread) :
             
             ORIGIN = samplepoint()
             
+            distance = lambda x, y : ROAD.distance( roadmap, 
+                                                    x, y, length='length' )
             planner = RoadmapPlanner( roadmap )
-            scheduler = RoundRobinScheduler()
+            
+            if True :
+                scheduler = RoundRobinScheduler()
+            else :
+                getTail = lambda dem : dem.origin
+                getHead = lambda dem : dem.destination
+                scheduler = kCraneScheduler( getTail, getHead, distance )
         
         # instantiate the gate
         gate = GatedTaxiDispatch()
