@@ -1,12 +1,14 @@
 
 
-
-
-def averageDistance( distr, distanceFunc, N=100000 ) :
+def averageDistance( samplearc, getTail, getHead, distance, N=100000 ) :
     """ trivial statistical mean algorithm """
+    total = 0.
     for i in xrange(N) :
-        s, t = distr.sampleODPair()
-        total += distanceFunc(s,t)
+        arc = samplearc()
+        s = getTail(arc)
+        t = getHead(arc)
+        total += distance( s, t )
+        
     return float(total) / N
 
 

@@ -31,18 +31,25 @@ class SimDialog(gui.QDialog) :
         # Matplotlib canvas
         self.canvas = mplcanvas.MplCanvas()
         # simulation group
-        self.simgroup = self._OneShotSimGroup('One-shot Simulation')
+        #self.simgroup = self._OneShotSimGroup('One-shot Simulation')
+        self.simgroup = self._OneShotSimGroup()
         self.connect( self.simgroup.startsim, core.SIGNAL('clicked()'),
                       self.dosim )
+        self.calcAvg = self._AverageCarry()
+        
+        """ layout """
+        self.tabs = gui.QTabWidget()
+        self.tabs.addTab( self.simgroup, 'One-shot Simulation' )
+        self.tabs.addTab( self.calcAvg, 'Calculate Average')
         
         layout = gui.QVBoxLayout()
         layout.addWidget( self.canvas )
-        layout.addWidget( self.simgroup )
+        layout.addWidget( self.tabs )
         
         self.setLayout( layout )
         self.setWindowTitle('Taxi Simulation')
     
-    class _OneShotSimGroup(gui.QGroupBox) :
+    class _OneShotSimGroup(gui.QWidget) :
         def __init__(self, *args, **kwargs ) :
             super(SimDialog._OneShotSimGroup,self).__init__( *args, **kwargs )
             
@@ -87,6 +94,52 @@ class SimDialog(gui.QDialog) :
             layout.addWidget( self.startsim )
             layout.addWidget( self.progress )
             self.setLayout( layout )
+            
+    class _AverageCarry(gui.QWidget) :
+        def __init__(self, *args, **kwargs ) :
+            super(SimDialog._AverageCarry,self).__init__()
+            
+            self.result = gui.QDoubleSpinBox()
+            self.result.setDecimals(6)
+            #self.result.setValue(1.)
+            
+            self.effort = gui.QSpinBox()
+            self.effort.setValue(10000)
+            self.effort.setMaximum(10**6)
+            
+            self.compute = gui.QPushButton('Find Average')
+            self.connect( self.compute, core.SIGNAL('clicked()'),
+                          self.findAverage )
+            
+            grid = gui.QGridLayout()
+            grid.addWidget( gui.QLabel('Average Carry'), 0, 0 )
+            grid.addWidget( self.result, 0, 1 )
+            grid.addWidget( gui.QLabel('Sampling Effort'), 1, 0 )
+            grid.addWidget( self.effort, 1, 1 )
+            
+            layout = gui.QVBoxLayout()
+            layout.addLayout( grid )
+            layout.addWidget( self.compute )
+            self.setLayout(layout)
+            
+            
+        def findAverage(self) :
+            import setiptah.taxitheory.euclidean.probability as eucprob
+            
+            def samplepair() :
+                x, y = [ np.random.rand(2) for i in xrange(2) ]
+                return x, y
+            
+            getTail = lambda pair : pair[0]
+            getHead = lambda pair : pair[1]
+            distance = lambda x, y : np.linalg.norm(y-x)
+            
+            N = self.effort.value()
+            res = eucprob.averageDistance( samplepair,
+                                           getTail, getHead, distance, N)
+            
+            self.result.setValue( res )
+            
             
             
         
