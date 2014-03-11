@@ -24,71 +24,83 @@ RESULTS = SimResults()
 
 
 
-
-
 class SimDialog(gui.QDialog) :
     def __init__(self, parent=None ) :
         super(SimDialog,self).__init__(parent)
         
+        # Matplotlib canvas
         self.canvas = mplcanvas.MplCanvas()
-        
-        self.durationBox = gui.QDoubleSpinBox()
-        self.durationBox.setMaximum( 10000. )
-        self.durationBox.setValue( 50. )
-        self.durationBox.setSingleStep( 10. )
-        
-        self.rateBox = gui.QDoubleSpinBox()
-        self.rateBox.setValue( 5. )
-        self.rateBox.setSingleStep( .1 )
-        
-        self.numvehBox = gui.QSpinBox()
-        self.numvehBox.setValue(2)
-        
-        self.speedBox = gui.QDoubleSpinBox()
-        self.speedBox.setValue( 1. )
-        
-        self.distrib = gui.QComboBox()
-        
-        self.startsim = gui.QPushButton('Simulate')
-        self.connect( self.startsim, core.SIGNAL('clicked()'), self.dosim )
-        
-        self.progress = gui.QProgressBar()
-        
-        widgets = [ self.durationBox, self.rateBox, self.numvehBox,
-                   self.speedBox, self.distrib ]
-        labels = {
-                  self.durationBox : 'Duration',
-                  self.rateBox : 'Arrival Rate',
-                  self.numvehBox : 'Fleet Size',
-                  self.speedBox : 'Vehicle Speed',
-                  self.distrib : 'O/D Distribution'
-                  }
-        
-        grid = gui.QGridLayout()
-        for row, widget in enumerate( widgets ) :
-            grid.addWidget( gui.QLabel( labels[widget] ), row, 0 )
-            grid.addWidget( widget, row, 1 )
+        # simulation group
+        self.simgroup = self._OneShotSimGroup('One-shot Simulation')
+        self.connect( self.simgroup.startsim, core.SIGNAL('clicked()'),
+                      self.dosim )
         
         layout = gui.QVBoxLayout()
         layout.addWidget( self.canvas )
-        layout.addLayout( grid )
-        layout.addWidget( self.startsim )
-        layout.addWidget( self.progress )
+        layout.addWidget( self.simgroup )
         
         self.setLayout( layout )
         self.setWindowTitle('Taxi Simulation')
+    
+    class _OneShotSimGroup(gui.QGroupBox) :
+        def __init__(self, *args, **kwargs ) :
+            super(SimDialog._OneShotSimGroup,self).__init__( *args, **kwargs )
+            
+            # instantiate
+            self.durationBox = gui.QDoubleSpinBox()
+            self.durationBox.setMaximum( 10000. )
+            self.durationBox.setValue( 50. )
+            self.durationBox.setSingleStep( 10. )
+            
+            self.rateBox = gui.QDoubleSpinBox()
+            self.rateBox.setValue( 5. )
+            self.rateBox.setSingleStep( .1 )
+            
+            self.numvehBox = gui.QSpinBox()
+            self.numvehBox.setValue(2)
+            
+            self.speedBox = gui.QDoubleSpinBox()
+            self.speedBox.setValue( 1. )
+            
+            self.distrib = gui.QComboBox()
+            
+            self.startsim = gui.QPushButton('Simulate')
+            self.progress = gui.QProgressBar()
+            
+            # layout
+            widgets = [ self.durationBox, self.rateBox, self.numvehBox,
+                       self.speedBox, self.distrib ]
+            labels = {
+                      self.durationBox : 'Duration',
+                      self.rateBox : 'Arrival Rate',
+                      self.numvehBox : 'Fleet Size',
+                      self.speedBox : 'Vehicle Speed',
+                      self.distrib : 'O/D Distribution'
+                      }
+            grid = gui.QGridLayout()
+            for row, widget in enumerate( widgets ) :
+                grid.addWidget( gui.QLabel( labels[widget] ), row, 0 )
+                grid.addWidget( widget, row, 1 )
+                
+            layout = gui.QVBoxLayout()
+            layout.addLayout( grid )
+            layout.addWidget( self.startsim )
+            layout.addWidget( self.progress )
+            self.setLayout( layout )
+            
+            
         
         
     def dosim(self) :
-        horizon = self.durationBox.value()
-        rate = self.rateBox.value()
-        numveh = self.numvehBox.value()
-        vehspeed = self.speedBox.value()
-        
-        print horizon, rate, numveh, vehspeed
+        simgroup = self.simgroup
+        horizon = simgroup.durationBox.value()
+        rate = simgroup.rateBox.value()
+        numveh = simgroup.numvehBox.value()
+        vehspeed = simgroup.speedBox.value()
+        #print horizon, rate, numveh, vehspeed
         
         self.simthread = SimulateThread( rate, numveh, vehspeed, horizon )
-        self.simthread.timeElapsed.connect( self.progress.setValue )
+        self.simthread.timeElapsed.connect( self.simgroup.progress.setValue )
         self.simthread.simulateDone.connect( self.updatePlot )
         
         self.simthread.start()
