@@ -35,12 +35,17 @@ class SimDialog(gui.QDialog) :
         self.simgroup = self._OneShotSimGroup()
         self.connect( self.simgroup.startsim, core.SIGNAL('clicked()'),
                       self.dosim )
+        
         self.calcAvg = self._AverageCarry()
+        
+        self.utilsim = self._UtilizationRangeSim()
+        self.utilsim.registerValuable( self.calcAvg.result )
         
         """ layout """
         self.tabs = gui.QTabWidget()
         self.tabs.addTab( self.simgroup, 'One-shot Simulation' )
         self.tabs.addTab( self.calcAvg, 'Calculate Average')
+        self.tabs.addTab( self.utilsim, 'Utilization Sims' )
         
         layout = gui.QVBoxLayout()
         layout.addWidget( self.canvas )
@@ -139,6 +144,71 @@ class SimDialog(gui.QDialog) :
                                            getTail, getHead, distance, N)
             
             self.result.setValue( res )
+            
+            
+            
+    class _UtilizationRangeSim(gui.QWidget) :
+        def __init__(self, *args, **kwargs ) :
+            super(SimDialog._UtilizationRangeSim,self).__init__()
+            
+            self.numveh = gui.QSpinBox()
+            self.vehspeed = gui.QDoubleSpinBox()
+            pLayout = gui.QGridLayout()
+            pLayout.addWidget( gui.QLabel('Fleet size'), 0, 0 )
+            pLayout.addWidget( self.numveh, 0, 1 )
+            pLayout.addWidget( gui.QLabel('Vehicle speed'), 0, 2 )
+            pLayout.addWidget( self.vehspeed, 0, 3 )
+            
+            self.environ = gui.QComboBox()
+            self.ordermin = gui.QDoubleSpinBox()
+            self.ordermin.setMaximum(1000)
+            self.ordermax = gui.QDoubleSpinBox()
+            self.ordermax.setMaximum(1000)
+            self.samples = gui.QSpinBox()
+            rlayout = gui.QGridLayout()
+            rlayout.addWidget( gui.QLabel('Env.'), 0, 0 )
+            rlayout.addWidget( self.environ, 1, 0 )
+            rlayout.addWidget( gui.QLabel('Order min'), 0, 1 )
+            rlayout.addWidget( self.ordermin, 1, 1 )
+            rlayout.addWidget( gui.QLabel('Order max'), 0, 2 )
+            rlayout.addWidget( self.ordermax, 1, 2 )
+            rlayout.addWidget( gui.QLabel('(samples)'), 0, 3 )
+            rlayout.addWidget( self.samples, 1, 3 )
+            
+            self.simbutton = gui.QPushButton('Simulate')
+            self.connect( self.simbutton, core.SIGNAL('clicked()'),
+                          self._prepareRates )
+            
+            layout = gui.QVBoxLayout()
+            layout.addLayout( pLayout )
+            layout.addLayout( rlayout )
+            layout.addWidget( self.simbutton )
+            
+            self.setLayout( layout )
+            
+        def registerValuable(self, valuable ) :
+            self.valuable = valuable
+            
+            
+        def _prepareRates(self) :
+            import setiptah.taxitheory.euclidean.simulation as simhelp
+            
+            gmin = self.ordermin.value()
+            gmax = self.ordermax.value()
+            N = self.samples.value()
+            
+            G = np.logspace( np.log10(gmin), np.log10(gmax), N )
+            utils = [ simhelp.inversePlanarOrder(g) for g in G ]
+            
+            moverscplx = self.valuable.value()
+            numveh = self.numveh.value()
+            speed = self.vehspeed.value()
+            rates = [ simhelp.utilizationToRate( rho, moverscplx, numveh, speed )
+                     for rho in utils ]
+            
+            print rates
+            
+            
             
             
             
@@ -356,7 +426,7 @@ class SimulateThread(core.QThread) :
                 
             self.alarm()
             
-                
+            
             # phase II
             T = [ T0 ]
             xmax = max( RESULTS.alive_tape )
