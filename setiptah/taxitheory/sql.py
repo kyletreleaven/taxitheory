@@ -57,6 +57,42 @@ class ExperimentRecord :
         VALUES (?,?,?,?,?,?,?,?,?)
         """
         return fmt
+    
+    def sqlUpdate(self) :
+        fmt = """
+        UPDATE experiments
+        SET
+        arrival_rate=?, num_vehicles=?, vehicle_speed=?,
+        init_dur=?, time_factor=?, thresh_factor=?, exploit_ratio=?,
+        distrib_key=?, policy_key=?
+        WHERE id=?
+        """
+        return fmt
+    
+    @classmethod
+    def fromID(cls, conn, id ) :
+        cur = conn.cursor()
+        fmt = """
+        SELECT * FROM experiments WHERE id=?
+        """
+        cur.execute(fmt, (id,) )
+        row = cur.fetchone()
+        
+        e = cls()
+        e.arrivalrate = float( row[1] )
+        e.numveh = int( row[2] )
+        e.vehspeed = float( row[3] )
+        
+        e.init_dur = float( row[4] )
+        e.time_factor = float( row[5] )
+        e.thresh_factor = float( row[6] )
+        e.exploit_ratio = float( row[7] )
+        
+        e.distrib_key = row[8]
+        e.policy_key = row[9]
+        return e
+    
+    
 
 def experimentsIter( conn ) :
     cur = conn.cursor()

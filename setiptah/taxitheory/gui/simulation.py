@@ -115,6 +115,9 @@ class ExperimentsWidget(gui.QWidget) :
         self.newExperiment.clicked.connect( self.doNewExperiment )
         self.saveExperiment.clicked.connect( self.doSaveExperiment )
         
+        experimentChanged = self.currentExperiment.currentIndexChanged
+        experimentChanged.connect( self.activateExperiment )
+        
     def populateForm(self) :
         self.populateDistributions()
         self.populateExperiments()
@@ -130,13 +133,30 @@ class ExperimentsWidget(gui.QWidget) :
         cur = self.dbconn.cursor()
         for id, in cur.execute('SELECT id FROM experiments') :
             self.currentExperiment.addItem( str(id) )
-            
-        self.activateExperiment()
+        #self.activateExperiment()
+        
         
     def activateExperiment(self) :
         # download experiment data from DB
-        pass
-    
+        id = self.currentExperiment.currentText()
+        e = mysql.ExperimentRecord.fromID( self.dbconn, int(id) )
+        
+        self.currRate.setValue( e.arrivalrate )
+        self.currNumveh.setValue( e.numveh )
+        self.currSpeed.setValue( e.vehspeed )
+        
+        self.initDur.setValue( e.init_dur )
+        self.timeFactor.setValue( e.time_factor )
+        self.threshFactor.setValue( e.thresh_factor )
+        self.exploitRatio.setValue( e.exploit_ratio )
+        
+        index = self.currDistr.findText( e.distrib_key )
+        self.currDistr.setCurrentIndex( index )
+        
+        index = self.currPolicy.findText( e.distrib_key )
+        self.currPolicy.setCurrentIndex( index )
+        
+        
     def doNewExperiment(self) :
         e = self._prepareRecord()
         fmt = e.sqlInsert()
@@ -152,6 +172,16 @@ class ExperimentsWidget(gui.QWidget) :
         
     def doSaveExperiment(self) :
         e = self._prepareRecord()
+        fmt = e.sqlUpdate()
+        
+        id = int( self.currentExperiment.currentText() )
+        tup = e.sqlTuple() + (id,)
+        
+        print fmt, tup
+        
+        cur = self.dbconn.cursor()
+        cur.execute( fmt, tup )
+        self.dbconn.commit()
         
         
     def _prepareRecord(self) :
