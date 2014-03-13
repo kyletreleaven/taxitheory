@@ -46,6 +46,8 @@ class ExperimentsWidget(gui.QWidget) :
         self.currUtil = gui.QDoubleSpinBox()
         self.currLengthFactor = gui.QDoubleSpinBox()
         
+        self.currPolicy = gui.QComboBox()
+        
         self.initDur = gui.QDoubleSpinBox()
         self.initDur.setValue(50.)
         self.timeFactor = gui.QDoubleSpinBox()
@@ -66,6 +68,7 @@ class ExperimentsWidget(gui.QWidget) :
         
     def layoutUI(self) :
         file, setup, tuning, timing = [ gui.QHBoxLayout() for k in xrange(4) ]
+        
         file.addWidget( gui.QLabel('Experiment') )
         file.addWidget( self.currentExperiment )
         file.addWidget( self.newExperiment )
@@ -85,6 +88,10 @@ class ExperimentsWidget(gui.QWidget) :
         tuning.addWidget( self.factorLabel )
         tuning.addWidget( self.currLengthFactor )
         
+        policyLayout = gui.QHBoxLayout()
+        policyLayout.addWidget( gui.QLabel('Policy') )
+        policyLayout.addWidget( self.currPolicy )
+        
         timing.addWidget( gui.QLabel('Initial Dur') )
         timing.addWidget( self.initDur )
         timing.addWidget( gui.QLabel('Time Factor') )
@@ -98,6 +105,7 @@ class ExperimentsWidget(gui.QWidget) :
         layout.addLayout( file )
         layout.addLayout( setup )
         layout.addLayout( tuning )
+        layout.addLayout( policyLayout )
         layout.addLayout( timing )
         
         self.setLayout( layout )
@@ -117,10 +125,11 @@ class ExperimentsWidget(gui.QWidget) :
         
     def populateExperiments(self) :
         self.currentExperiment.clear()
-        mysql.prepareDatabase( self.dbconn, DEBUG=True )
+        mysql.prepareDatabase( self.dbconn, DEBUG=False )
+        
         cur = self.dbconn.cursor()
-        for id in cur.execute('SELECT id FROM experiments') :
-            self.currentExperiment.addItem( id )
+        for id, in cur.execute('SELECT id FROM experiments') :
+            self.currentExperiment.addItem( str(id) )
             
         self.activateExperiment()
         
@@ -129,13 +138,39 @@ class ExperimentsWidget(gui.QWidget) :
         pass
     
     def doNewExperiment(self) :
+        e = self._prepareRecord()
+        fmt = e.sqlInsert()
+        tup = e.sqlTuple()
+        
+        print fmt, tup
+        
+        cur = self.dbconn.cursor()
+        cur.execute( fmt, tup )
+        self.dbconn.commit()
+        
+        self.populateExperiments()
+        
+    def doSaveExperiment(self) :
+        e = self._prepareRecord()
+        
+        
+    def _prepareRecord(self) :
         e = mysql.ExperimentRecord()
         e.arrivalrate = self.currRate.value()
         e.numveh = self.currNumveh.value()
         e.vehspeed = self.currSpeed.value()
         
-    def doSaveExperiment(self) :
-        pass
+        e.init_dur = self.initDur.value()
+        e.time_factor = self.timeFactor.value()
+        e.thresh_factor = self.threshFactor.value()
+        e.exploit_ratio = self.exploitRatio.value()
+        
+        e.distrib_key = unicode( self.currDistr.currentText() )
+        e.policy_key = unicode( self.currPolicy.currentText() )
+        
+        return e
+        
+        
         
     
 if False :
