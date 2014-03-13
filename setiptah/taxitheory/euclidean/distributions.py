@@ -6,9 +6,6 @@ import scipy.optimize as opt
 
 
 class Distribution :
-    def __init__(self) :
-        raise NotImplementedError('abstract')
-    
     def sample(self) :
         raise NotImplementedError('abstract')
     
@@ -30,9 +27,9 @@ class Distribution :
         if g == 0. : return 0.
         # otherwise
         ohr = 1.
-        while planarOrder( 1.-ohr ) <= g : ohr *= .5
+        while self.queueLengthFactor( 1.-ohr ) <= g : ohr *= .5
         
-        objective = lambda rho : planarOrder( rho ) - g
+        objective = lambda rho : self.queueLengthFactor( rho ) - g
         return opt.bisect( objective, 1.-2*ohr, 1.-ohr )
 
     
@@ -73,10 +70,46 @@ class PairUniform3(Distribution) :
         return np.power( 1. - rho, -3. )
     
     
-    
 distributions = {}
-distributions['PairUniform2'] = PairUniform2
-distributions['PairUniform3'] = PairUniform3
+distributions['PairUniform2'] = PairUniform2()
+distributions['PairUniform3'] = PairUniform3()
+
+
+
+
+def utilizationToRate( util, moverscplx, numveh=1, vehspeed=1. ) :
+    rate = util * numveh * vehspeed / moverscplx
+    return rate
+
+
+
+
+if __name__ == '__main__' :
+    import matplotlib.pyplot as plt
+    plt.close('all')
+    
+    distr = distributions['PairUniform2']
+    
+    rho = np.linspace(0,1,500+2)[1:-1]
+    F = distr.queueLengthFactor(rho)
+    
+    G = np.logspace(0,5,20)
+    rhostar = [ distr.inverseQueueLengthFactor( g ) for g in G ]
+    
+    plt.plot(rho,F)
+    plt.scatter( rhostar, G, marker='x' )
+    plt.show()
+    
+    
+
+
+
+
+
+
+
+
+
 
 
 

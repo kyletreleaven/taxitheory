@@ -26,8 +26,8 @@ class ExperimentsWidget(gui.QWidget) :
         super(ExperimentsWidget,self).__init__(parent)
         
         self.populateUI()
-        self.layoutUI()
         self.connectUI()
+        self.layoutUI()
         
         self.dbconn = sqlite3.connect(DBFILENAME)
         self.populateForm()
@@ -43,8 +43,17 @@ class ExperimentsWidget(gui.QWidget) :
         self.currSpeed = gui.QDoubleSpinBox()
         
         self.currRate = gui.QDoubleSpinBox()
+        self.currRate.setMaximum(100.)
+        self.currRate.setDecimals(10)
+        
         self.currUtil = gui.QDoubleSpinBox()
+        self.currUtil.setMaximum(10.)
+        self.currUtil.setDecimals(10)
+        self.currUtil.setSingleStep(.01)
+        self.currUtil.setValue(0.)
+        
         self.currLengthFactor = gui.QDoubleSpinBox()
+        self.currLengthFactor.setMaximum(10000.)
         
         self.currPolicy = gui.QComboBox()
         
@@ -57,13 +66,34 @@ class ExperimentsWidget(gui.QWidget) :
         self.exploitRatio = gui.QDoubleSpinBox()
         self.exploitRatio.setValue(1.)
         
-        self.fixStat = gui.QButtonGroup()
         self.rateLabel = gui.QRadioButton('Arrival Rate')
         self.utilLabel = gui.QRadioButton('Utilization')
         self.factorLabel = gui.QRadioButton('Length Factor')
+        
+    def connectUI(self) :
+        self.newExperiment.clicked.connect( self.doNewExperiment )
+        self.saveExperiment.clicked.connect( self.doSaveExperiment )
+        
+        experimentChanged = self.currentExperiment.currentIndexChanged
+        experimentChanged.connect( self.activateExperiment )
+        
+        self.fixStat = gui.QButtonGroup()
         self.fixStat.addButton( self.rateLabel )
         self.fixStat.addButton( self.utilLabel )
         self.fixStat.addButton( self.factorLabel )
+        #self.fixStat.buttonClicked.connect( self.ensureFixedStat )    # don't!
+        self.utilLabel.click()  # to check it.
+        
+        # these three things should re-compute rate/util/factor with a fixture
+        self.currDistr.currentIndexChanged.connect( self.ensureTuning )
+        self.currNumveh.valueChanged.connect( self.ensureTuning )
+        self.currSpeed.valueChanged.connect( self.ensureTuning )
+        
+        # should re-compute with specific fixture
+        self.currRate.valueChanged.connect( self.ensureRate )
+        self.currUtil.valueChanged.connect( self.ensureUtil )
+        self.currLengthFactor.valueChanged.connect( self.ensureFactor )
+        
         
         
     def layoutUI(self) :
@@ -111,12 +141,6 @@ class ExperimentsWidget(gui.QWidget) :
         self.setLayout( layout )
         
         
-    def connectUI(self) :
-        self.newExperiment.clicked.connect( self.doNewExperiment )
-        self.saveExperiment.clicked.connect( self.doSaveExperiment )
-        
-        experimentChanged = self.currentExperiment.currentIndexChanged
-        experimentChanged.connect( self.activateExperiment )
         
     def populateForm(self) :
         self.populateDistributions()
@@ -141,20 +165,23 @@ class ExperimentsWidget(gui.QWidget) :
         id = self.currentExperiment.currentText()
         e = mysql.ExperimentRecord.fromID( self.dbconn, int(id) )
         
-        self.currRate.setValue( e.arrivalrate )
+        index = self.currDistr.findText( e.distrib_key )
+        self.currDistr.setCurrentIndex( index )
         self.currNumveh.setValue( e.numveh )
         self.currSpeed.setValue( e.vehspeed )
+        
+        self.currRate.setValue( e.arrivalrate )
+        # update may be handled by previous line
+        # self.ensureRate()
+        
+        index = self.currPolicy.findText( e.distrib_key )
+        self.currPolicy.setCurrentIndex( index )
         
         self.initDur.setValue( e.init_dur )
         self.timeFactor.setValue( e.time_factor )
         self.threshFactor.setValue( e.thresh_factor )
         self.exploitRatio.setValue( e.exploit_ratio )
         
-        index = self.currDistr.findText( e.distrib_key )
-        self.currDistr.setCurrentIndex( index )
-        
-        index = self.currPolicy.findText( e.distrib_key )
-        self.currPolicy.setCurrentIndex( index )
         
         
     def doNewExperiment(self) :
@@ -200,8 +227,77 @@ class ExperimentsWidget(gui.QWidget) :
         
         return e
         
+    def ensureFixedStat(self) :
+        """ this is dumb, don't do this """
+        self.currRate.setEnabled( not self.rateLabel.isChecked() )
+        self.currUtil.setEnabled( not self.utilLabel.isChecked() )
+        self.currLengthFactor.setEnabled( not self.factorLabel.isChecked() )
+        
+    def _setTuning(self, rate, util, factor ) :
+        self.currRate.setValue( rate )
+        self.currUtil.setValue( util )
+        self.currLengthFactor.setValue( factor )
+
+    def ensureRate(self) :
+        numveh = self.currNumveh.value()
+        vehspeed = self.currSpeed.value()
+        distr_key = self.currDistr.currentText()
+        distr = distributions.distributions[ unicode(distr_key) ]
+        moverscplx = distr.meancarry() + distr.meanfetch()
+        
+        rate = self.currRate.value()
+        rho = rate * moverscplx / numveh / vehspeed
+        factor = distr.queueLengthFactor( rho )
+        
+        self._setTuning( rate, rho, factor )
+        
+    def ensureUtil(self) :
+        numveh = self.currNumveh.value()
+        vehspeed = self.currSpeed.value()
+        distr_key = self.currDistr.currentText()
+        distr = distributions.distributions[ unicode(distr_key) ]
+        moverscplx = distr.meancarry() + distr.meanfetch()
+        
+        rho = self.currUtil.value()
+        rate = rho * numveh * vehspeed / moverscplx
+        factor = distr.queueLengthFactor( rho )
+        
+        self._setTuning( rate, rho, factor )
+        
+    def ensureFactor(self) :
+        numveh = self.currNumveh.value()
+        vehspeed = self.currSpeed.value()
+        distr_key = self.currDistr.currentText()
+        distr = distributions.distributions[ unicode(distr_key) ]
+        moverscplx = distr.meancarry() + distr.meanfetch()
+        
+        factor = self.currLengthFactor.value()
+        rho = distr.inverseQueueLengthFactor( factor )
+        rate = rho * numveh * vehspeed / moverscplx
+        
+        self._setTuning( rate, rho, factor )
+        
+    def ensureTuning(self, reference=None ) :
+        """ use radio buttons to dispatch tuning """
+        if self.rateLabel.isChecked() :
+            self.ensureRate()
+        elif self.utilLabel.isChecked() :
+            self.ensureUtil()
+        elif self.factorLabel.isChecked() :
+            self.ensureFactor()
+            
+        else :
+            raise 'no active radio button'
         
         
+        
+        
+        
+        
+        
+        
+    
+    
     
 if False :
     class ExperimentRecord :
