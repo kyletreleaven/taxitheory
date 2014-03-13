@@ -1,4 +1,7 @@
 
+import sqlite3 as sql
+
+
 TABLE_SCHEMA = {}
 
 TABLE_SCHEMA['experiments'] = """
@@ -20,7 +23,8 @@ CREATE TABLE IF NOT EXISTS experiments (
     moverscplx REAL,
     utilization REAL,
     
-    policy_key TEXT NOT NULL
+    policy_key TEXT NOT NULL,
+    sim_status INTEGER DEFAULT 0
 )
 """
 
@@ -54,6 +58,26 @@ class ExperimentRecord :
         """
         return fmt
 
+def experimentsIter( conn ) :
+    cur = conn.cursor()
+    
+    res = []
+    for row in cur.execute('SELECT * FROM experiments') :
+        e = ExperimentRecord()
+        
+        e.arrivalrate = float( row[1] )
+        e.numveh = int( row[2] )
+        e.vehspeed = float( row[3] )
+        
+        e.init_dur = float( row[4] )
+        e.time_factor = float( row[5] )
+        e.thresh_factor = float( row[6] )
+        e.exploit_ratio = float( row[7] )
+        
+        e.distrib_key = row[8]
+        e.policy_key = row[9]
+        
+        yield e
 
 
 
@@ -82,9 +106,29 @@ class DemandRecord :
 
 
 
+
+
+def prepareDatabase( conn, DEBUG=False ) :
+    cur = conn.cursor()
+    
+    if DEBUG :
+        cur.execute('DROP TABLE IF EXISTS experiments')
+        cur.execute('DROP TABLE IF EXISTS results')
+        
+    cur.execute( TABLE_SCHEMA['experiments'] )
+    cur.execute( TABLE_SCHEMA['results'] )
+    
+    conn.commit()
+
+
+
+
+
+
+
 if __name__ == '__main__' :
     # don't need sys
-    import sqlite3 as sql
+    
     import argparse
     
     parser = argparse.ArgumentParser()
@@ -92,21 +136,17 @@ if __name__ == '__main__' :
     args, unknown_args = parser.parse_known_args()
     # unknown_args can be used, e.g., to initialize a Qt application
     
+    
     conn = sql.connect( args.dbfile )
+    prepareDatabase( conn, DEBUG=True )
+    
     cur = conn.cursor()
     
-    DEBUG = True
-    if DEBUG :
-        cur.execute('DROP TABLE IF EXISTS experiments')
-        cur.execute('DROP TABLE IF EXISTS results')
-    
-    cur.execute( TABLE_SCHEMA['experiments'] )
     experiment = ExperimentRecord()
     fmt = experiment.sqlInsert()
     tup = experiment.sqlTuple()
-    cur.execute( fmt, tup )
     
-    cur.execute( TABLE_SCHEMA['results'] )
+    cur.execute( fmt, tup )
     
     conn.commit()
     conn.close()
