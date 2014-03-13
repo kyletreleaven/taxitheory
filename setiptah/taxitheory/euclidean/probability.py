@@ -19,4 +19,3 @@ def averageDistance( samplearc, getTail, getHead, distance, N=100000 ) :
 
 
 
-

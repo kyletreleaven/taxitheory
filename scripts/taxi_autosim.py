@@ -237,6 +237,7 @@ class SimDialog(gui.QDialog) :
             rates = [ simhelp.utilizationToRate( rho, moverscplx, numveh, speed )
                      for rho in utils ]
             
+            self.outlist.clear()    # get rid of previous experiments
             for rate in rates :
                 c = SimDialog.ConfigItem( rate, numveh, speed )
                 item = gui.QStandardItem( repr(c) )
