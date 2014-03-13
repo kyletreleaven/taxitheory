@@ -30,6 +30,14 @@ class SimDialog(gui.QDialog) :
         
         # Matplotlib canvas
         self.canvas = mplcanvas.MplCanvas()
+        
+        #self.configs = gui.QStandardItemModel()
+        #self.configview = gui.QListView(self.conf)
+        self.experiments = gui.QStandardItemModel()
+        self.experiments_view = gui.QListView()
+        self.experiments_view.setModel( self.experiments )
+        self.experiments_view.doubleClicked.connect( self.startExperiment )
+        
         # simulation group
         #self.simgroup = self._OneShotSimGroup('One-shot Simulation')
         self.simgroup = self._OneShotSimGroup()
@@ -40,6 +48,7 @@ class SimDialog(gui.QDialog) :
         
         self.utilsim = self._UtilizationRangeSim()
         self.utilsim.registerValuable( self.calcAvg.result )
+        self.utilsim.registerOutList( self.experiments )
         
         """ layout """
         self.tabs = gui.QTabWidget()
@@ -49,6 +58,7 @@ class SimDialog(gui.QDialog) :
         
         layout = gui.QVBoxLayout()
         layout.addWidget( self.canvas )
+        layout.addWidget( self.experiments_view )
         layout.addWidget( self.tabs )
         
         self.setLayout( layout )
@@ -109,8 +119,8 @@ class SimDialog(gui.QDialog) :
             #self.result.setValue(1.)
             
             self.effort = gui.QSpinBox()
-            self.effort.setValue(10000)
             self.effort.setMaximum(10**6)
+            self.effort.setValue(10000)
             
             self.compute = gui.QPushButton('Find Average')
             self.connect( self.compute, core.SIGNAL('clicked()'),
@@ -146,13 +156,26 @@ class SimDialog(gui.QDialog) :
             self.result.setValue( res )
             
             
+    class ConfigItem :
+        def __init__(self, rate, numveh, vehspeed ) :
+            self.rate = rate
+            self.numveh = numveh
+            self.vehspeed = vehspeed
+            
+        def __repr__(self) :
+            data = self.rate, self.numveh, self.vehspeed
+            return '{ rate:%f, fleet:%d, vel:%f }' % data
+            
             
     class _UtilizationRangeSim(gui.QWidget) :
         def __init__(self, *args, **kwargs ) :
             super(SimDialog._UtilizationRangeSim,self).__init__()
             
             self.numveh = gui.QSpinBox()
+            self.numveh.setValue( 5 )
             self.vehspeed = gui.QDoubleSpinBox()
+            self.vehspeed.setValue( 1. )
+            
             pLayout = gui.QGridLayout()
             pLayout.addWidget( gui.QLabel('Fleet size'), 0, 0 )
             pLayout.addWidget( self.numveh, 0, 1 )
@@ -162,9 +185,13 @@ class SimDialog(gui.QDialog) :
             self.environ = gui.QComboBox()
             self.ordermin = gui.QDoubleSpinBox()
             self.ordermin.setMaximum(1000)
+            self.ordermin.setValue( 10 )
             self.ordermax = gui.QDoubleSpinBox()
             self.ordermax.setMaximum(1000)
+            self.ordermax.setValue( 100 )
             self.samples = gui.QSpinBox()
+            self.samples.setValue( 10 )
+            
             rlayout = gui.QGridLayout()
             rlayout.addWidget( gui.QLabel('Env.'), 0, 0 )
             rlayout.addWidget( self.environ, 1, 0 )
@@ -186,6 +213,10 @@ class SimDialog(gui.QDialog) :
             
             self.setLayout( layout )
             
+            
+        def registerOutList(self, outlist ) :
+            self.outlist = outlist
+            
         def registerValuable(self, valuable ) :
             self.valuable = valuable
             
@@ -206,12 +237,14 @@ class SimDialog(gui.QDialog) :
             rates = [ simhelp.utilizationToRate( rho, moverscplx, numveh, speed )
                      for rho in utils ]
             
-            print rates
-            
-            
-            
-            
-            
+            for rate in rates :
+                c = SimDialog.ConfigItem( rate, numveh, speed )
+                item = gui.QStandardItem( repr(c) )
+                item.setEditable(False)
+                item.config = c
+                
+                self.outlist.appendRow( item )
+                
         
         
     def dosim(self) :
@@ -234,7 +267,17 @@ class SimDialog(gui.QDialog) :
             self.simthread.wait()
             
         event.accept()      # have to accept to close; otherwise, could "ingore"
-            
+        
+    def startExperiment(self, index ) :
+        item = self.experiments.itemFromIndex( index )
+        simconfig = item.config
+        
+        self.simgroup.numvehBox.setValue( simconfig.numveh )
+        self.simgroup.speedBox.setValue( simconfig.vehspeed )
+        self.simgroup.rateBox.setValue( simconfig.rate )
+        
+        self.dosim()
+        
         
     def simdone(self) :
         pass
