@@ -9,6 +9,12 @@ class Distribution :
     def sample(self) :
         raise NotImplementedError('abstract')
     
+    def getTail(self, pair ) :
+        return pair[0]
+    
+    def getHead(self, pair ) :
+        return pair[1]
+    
     def meancarry(self) :
         raise NotImplementedError('abstract')
     
@@ -51,7 +57,14 @@ class PairUniform2(Distribution) :
     
     def queueLengthFactor(self, rho ) :
         return -np.log( 1. - rho ) * np.power( 1. - rho, -2. )
-
+    
+    
+    def origin(self) :
+        return np.zeros(2)
+    
+    def distance(self, x, y ) :
+        return np.linalg.norm(y-x)
+    
 
     
 class PairUniform3(Distribution) :
@@ -68,6 +81,14 @@ class PairUniform3(Distribution) :
     
     def queueLengthFactor(self, rho ) :
         return np.power( 1. - rho, -3. )
+    
+    
+    def origin(self) :
+        return np.zeros(2)
+    
+    def distance(self, x, y ) :
+        return np.linalg.norm(y-x)
+
     
     
 distributions = {}
