@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import setiptah.taxitheory.gui.mplcanvas as mplcanvas
 
 # simulation components
+from setiptah.eventsim.signaling import Signal
 from setiptah.eventsim.simulation import Simulation
 from setiptah.queuesim.sources import PoissonClock, UniformClock
 from setiptah.dyvehr.euclidean import EuclideanPlanner
@@ -17,133 +18,14 @@ import setiptah.taxitheory.euclidean.distributions as distribs
 
 # some globals
 class data : pass
-#SIMULATION = data()
-
-RESULTS = data()
-
-
-
-
-class SimDialog(gui.QDialog) :
-    def __init__(self, parent=None ) :
-        super(SimDialog,self).__init__(parent)
-        
-        # Matplotlib canvas
-        self.canvas = mplcanvas.MplCanvas()
-        layout = gui.QVBoxLayout()
-        layout.addWidget( self.canvas )
-        #layout.addWidget( self.experiments_view )
-        #layout.addWidget( self.tabs )
-        self.setLayout( layout )
-        self.setWindowTitle('Taxi Simulation')
-        
-        # set a timer to start simulation!
-        
-    def closeEvent(self, event ) :
-        if hasattr(self, 'simthread' ) :
-            self.simthread.terminate()
-            self.simthread.wait()
-            
-        event.accept()      # have to accept to close; otherwise, could "ingore"
-        
-        
-        
-        
-    def startsim(self) :
-        simgroup = self.simgroup
-        horizon = simgroup.durationBox.value()
-        rate = simgroup.rateBox.value()
-        numveh = simgroup.numvehBox.value()
-        vehspeed = simgroup.speedBox.value()
-        #print horizon, rate, numveh, vehspeed
-        
-        self.simthread = SimulateThread( experiment )
-        self.simthread.simulateDone.connect( self.updatePlot )
-        
-        self.simthread.start()
-
-        
-    def startExperiment(self, index ) :
-        item = self.experiments.itemFromIndex( index )
-        simconfig = item.config
-        
-        self.simgroup.numvehBox.setValue( simconfig.numveh )
-        self.simgroup.speedBox.setValue( simconfig.vehspeed )
-        self.simgroup.rateBox.setValue( simconfig.rate )
-        
-        self.dosim()
-        
-        
-    def updatePlot(self) :
-        #print 'SIMULATION FINISHED'
-        fig = self.canvas.getFigure()
-        fig.clear()
-        ax = fig.add_subplot(1,1,1)
-        
-        #horizon = self.durationBox.value()      # this could have changed!
-        horizon = RESULTS.horizon
-        tocs = RESULTS.tocs
-        time = np.linspace(0, horizon, tocs )
-        #ax.step( time, RESULTS.ever_tape, time, RESULTS.alive_tape )
-        ax.step( time, RESULTS.alive_tape[:tocs] )
-        
-        self.canvas.draw()
-
-
-
-
-class SimulateThread(core.QThread) :
-    timeElapsed = core.pyqtSignal(int)
-    simulateDone = core.pyqtSignal()
-    
-    def __init__(self) :
-        super(SimulateThread,self).__init__()
-        
-    def alarm(self) :
-        RESULTS.tocs = len( RESULTS.alive_tape )
-        RESULTS.horizon = self.sim.get_time()
-        self.simulateDone.emit()
-        
-        
-    def run(self) :
-        pass
-    
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
 
 class SIMULATION :
-    
+    def __init__(self) :
+        self.signalUpdate = Signal()    # meh
+        
     def run(self, experiment ) :
         """ setup """
         sim = Simulation()
@@ -252,9 +134,10 @@ class SIMULATION :
         
         
         """ SIMULATE """
-        plt.close('all')
-        self.fig = plt.figure()
-        plt.show()
+        if False :
+            plt.close('all')
+            self.fig = plt.figure()
+            plt.show()
         
         T0 = experiment.init_dur
         alpha = experiment.time_factor
@@ -267,7 +150,7 @@ class SIMULATION :
             callback = sim.get_next_action()
             callback()
             
-        self.alarm()
+        self.simUpdate()
         
         
         # phase II
@@ -283,7 +166,7 @@ class SIMULATION :
                 callback()
                 
             T.append( Tk )
-            self.alarm()
+            self.simUpdate()
             
             newmax = max( self.alive_tape )
             if newmax > XTHRESH :
@@ -302,31 +185,129 @@ class SIMULATION :
             callback()
             
         self.finalT = Tf
-        self.alarm()
+        self.simUpdate()
         
         print 'SIMULATION DONE'
         
         
-    def alarm(self) :
-        self.tocs = len( self.alive_tape )
+    def simUpdate(self) :
         self.horizon = self.sim.get_time()
-        self.updatePlot()
+        self.tocs = len( self.alive_tape )
+        self.signalUpdate()     # signal
+
+
+
+
+
+
+
+
+
+class SimDialog(gui.QDialog) :
+    def __init__(self, parent=None ) :
+        super(SimDialog,self).__init__(parent)
+        
+        # Matplotlib canvas
+        self.canvas = mplcanvas.MplCanvas()
+        fig = self.canvas.getFigure()
+        fig.add_subplot(1,1,1)
+        
+        layout = gui.QVBoxLayout()
+        layout.addWidget( self.canvas )
+        #layout.addWidget( self.experiments_view )
+        #layout.addWidget( self.tabs )
+        self.setLayout( layout )
+        self.setWindowTitle('Taxi Simulations')
+        
+        
+        # schedule experiment(s) launch
+        self.eiter = []
+        core.QTimer.singleShot( 0, self.launchExperiments )
+        
+    def closeEvent(self, event ) :
+        if hasattr(self, 'simthread' ) :
+            self.simthread.terminate()
+            self.simthread.wait()
+            
+        event.accept()      # have to accept to close; otherwise, could "ingore"
+        
+        
+    def setExperiments(self, eiter ) :
+        self.eiter = eiter
+        
+    def launchExperiments(self) :
+        self.simthread = SimulateThread( self.eiter )
+        
+        # make connections
+        if True :
+            # must resolve entirely before thread moves on!
+            conntype = core.Qt.BlockingQueuedConnection
+            self.simthread.simUpdate.connect( self.updatePlot, conntype )
+        
+        # start the thread
+        self.simthread.start()
         
         
     def updatePlot(self) :
-        #print 'SIMULATION FINISHED'
-        fig = self.fig
+        sim = self.simthread.sim        # could have used self.sender().sim
+        
+        fig = self.canvas.getFigure()
         fig.clear()
         ax = fig.add_subplot(1,1,1)
         
-        #horizon = self.durationBox.value()      # this could have changed!
-        horizon = self.horizon
-        tocs = self.tocs
-        time = np.linspace(0, horizon, tocs )
-        #ax.step( time, RESULTS.ever_tape, time, RESULTS.alive_tape )
-        ax.step( time, self.alive_tape[:tocs] )
+        horizon = sim.horizon
+        tocs = sim.tocs
         
-        fig.canvas.draw()
+        time = np.linspace(0, horizon, tocs )
+        ax.step( time, sim.alive_tape[:tocs] )
+        
+        self.canvas.draw()
+
+
+
+
+class SimulateThread(core.QThread) :
+    #timeElapsed = core.pyqtSignal(int)
+    simUpdate = core.pyqtSignal()
+    
+    def __init__(self, eiter ) :
+        super(SimulateThread,self).__init__()
+        
+        self.eiter = eiter
+        self.sim = SIMULATION()
+        
+        # connect the SIMULATION update signal to pass-thru
+        self.sim.signalUpdate.connect( self.simUpdate.emit )
+        
+    def run(self) :
+        for e in self.eiter :
+            self.sim.run( e )
+            
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -357,45 +338,38 @@ if __name__ == '__main__' :
     #parser.add_argument( '--distr', type=str, default='PairUniform2' )
     #parser.add_argument( '--policy', type=str, default='STACKERCRANE')
     
-    # etc...
-    INITDUR = 50.
-    TIMEFACTOR = 2.
-    THRESHFACTOR = 1.1
-    EXPLOITRATIO = 2.
-    
     #parser.add_argument( 'N', type=int )
     #parser.add_argument( '--ordermin', type=float, default=1. )
     #parser.add_argument( '--ordermax', type=float, default=10. )
     args, unknown_args = parser.parse_known_args()
     
-    
     db = experimentdb.ExperimentDatabase( args.dbfile )
-    sim = SIMULATION()
-    
     eiter = db.experimentsIter()
-    e = eiter.next()
-    sim.run( e )
     
-    
-    app = gui.QApplication( sys.argv )
-    form = SimDialog()
-    
-    fig = form.canvas.getFigure()
-    ax = fig.add_subplot(1,1,1)
     
     if False :
-        t = np.linspace(0,1,100)
-        x = np.sin(2*np.pi*t)
-        ax.plot(t,x)
-    form.canvas.draw()
+        sim = SIMULATION()
+        sim.run( eiter.next() )     # run the first simulation
+        
+    else :
+        app = gui.QApplication( unknown_args )
+        
+        form = SimDialog()
+        #form.eiter = [ eiter.next() ]
+        #form.setExperiments( [ eiter.next() ] )
+        form.setExperiments( eiter )
+        form.show()
+        
+        sys.exit( app.exec_() )
     
-    form.show()
-    
-    sys.exit( app.exec_() )
     
     
-
-
-
     
-
+    
+    
+    
+    
+    
+    
+    
+    
