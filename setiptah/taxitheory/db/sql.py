@@ -97,12 +97,77 @@ class ExperimentDatabase(interface.ExperimentDatabase) :
         self.conn.commit()
         cur.close()
         
-        
+    def getExperiment(self, id ) :
+        cur = self.conn.cursor()
+        fmt = """
+        SELECT * FROM experiments WHERE id=?
+        """
+        cur.execute(fmt, (id,) )
+        row = cur.fetchone()
+        return self._fullRowToExperiment( row )
+    
     def experimentsIter(self) :
         cur = self.conn.cursor()
         for row in cur.execute('SELECT * FROM experiments') :
             yield self._fullRowToExperiment( row )
             
+    @classmethod
+    def _fullRowToExperiment(cls, row ) :
+        e = interface.ExperimentRecord()
+        e.uniqueID = int( row[0] )
+        
+        e.arrivalrate = float( row[1] )
+        e.numveh = int( row[2] )
+        e.vehspeed = float( row[3] )
+        
+        e.init_dur = float( row[4] )
+        e.time_factor = float( row[5] )
+        e.thresh_factor = float( row[6] )
+        e.exploit_ratio = float( row[7] )
+        
+        e.distrib_key = row[8]
+        e.policy_key = row[9]
+        
+        e.status = row[10]
+        if e.status is not None : e.status = int( e.status )
+        
+        return e
+    
+    
+    
+    def clearDemands(self, experimentID ) :
+        cur = self.conn.cursor()
+        fmt = """
+        DELETE FROM results
+        WHERE experiment_id=?
+        """
+        cur.execute( fmt, (experimentID,) )
+        self.conn.commit()
+        cur.close()
+        
+        
+    
+    def insertDemands(self, demands, experimentID ) :
+        cur = self.conn.cursor()
+        
+        fmt = self.demandSQLInsert()
+        tups = [ self.demandSQLTuple( dem, experimentID ) for dem in demands ]
+        cur.executemany( fmt, tups )
+        #tup = self.demandSQLTuple( demand, experimentID )
+        #cur.execute( fmt, tup )
+        
+        self.conn.commit()
+        cur.close()
+
+        
+        
+
+
+
+
+
+
+
             
             
     """ convenient formatters """
@@ -131,37 +196,58 @@ class ExperimentDatabase(interface.ExperimentDatabase) :
         WHERE id=?
         """
     
-    def getExperiment(self, id ) :
-        cur = self.conn.cursor()
-        fmt = """
-        SELECT * FROM experiments WHERE id=?
-        """
-        cur.execute(fmt, (id,) )
-        row = cur.fetchone()
-        return self._fullRowToExperiment( row )
+    def demandSQLTuple(self, dem, experimentID ) :
+        return ( experimentID,
+                 dem.arrival_time, dem.embark_time, dem.delivery_time )
     
-    @classmethod
-    def _fullRowToExperiment(cls, row ) :
-        e = interface.ExperimentRecord()
-        e.uniqueID = int( row[0] )
+    def demandSQLInsert(self) :
+        return """
+        INSERT INTO results
+        ( experiment_id, arrival_time, embark_time, delivery_time )
+        VALUES (?,?,?,?)
+        """
         
-        e.arrivalrate = float( row[1] )
-        e.numveh = int( row[2] )
-        e.vehspeed = float( row[3] )
         
-        e.init_dur = float( row[4] )
-        e.time_factor = float( row[5] )
-        e.thresh_factor = float( row[6] )
-        e.exploit_ratio = float( row[7] )
         
-        e.distrib_key = row[8]
-        e.policy_key = row[9]
-        
-        e.status = row[10]
-        if e.status is not None : e.status = int( e.status )
-        
-        return e
 
+
+
+if False :
+    class DemandRecord :
+        def __init__(self) :
+            #self.experimentID = None
+            
+            self.origin = None
+            self.destination = None
+            
+            self.arrival_time = None
+            self.embark_time = None
+            self.delivery_time = None
+            
+            self.wait_dur = None
+            self.carry_dur = None
+            self.system_dur = None
+    
+    
+    TABLE_SCHEMA['results'] = """
+    CREATE TABLE IF NOT EXISTS results (
+        experiment_id INTEGER NOT NULL,
+        
+        origin TEXT,
+        destination TEXT,
+        
+        arrival_time REAL NOT NULL,
+        embark_time REAL,
+        delivery_time REAL,
+        wait_dur REAL,
+        carry_dur REAL,
+        system_dur REAL,
+        
+        -- just a hint, won't actually be enforced by sqlite
+        FOREIGN KEY(experiment_id) REFERENCES experiments( id )    
+    )
+    """
+    
 
 
 

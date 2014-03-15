@@ -15,6 +15,8 @@ from setiptah.dyvehr.taxi import RoundRobinScheduler, kCraneScheduler
 
 import setiptah.taxitheory.euclidean.distributions as distribs
 
+import setiptah.taxitheory.db.sql as experimentdb
+
 
 # some globals
 class data : pass
@@ -187,6 +189,7 @@ class SIMULATION :
         self.finalT = Tf
         self.simUpdate()
         
+        
         print 'SIMULATION DONE'
         
         
@@ -279,18 +282,27 @@ class SimulateThread(core.QThread) :
         # connect the SIMULATION update signal to pass-thru
         self.sim.signalUpdate.connect( self.simUpdate.emit )
         
+        
     def run(self) :
+        db2 = experimentdb.ExperimentDatabase( args.dbfile )    # bad, bad form
+        
+        from setiptah.taxitheory.db import DemandRecord
+        def convertdemand( dem ) :
+            d = DemandRecord()
+            d.arrival_time = dem.arrived
+            d.embark_time = dem.embarked
+            d.delivery_time = dem.delivered
+            return d
+        
         for e in self.eiter :
+            db2.clearDemands( e.uniqueID )
+            
             self.sim.run( e )
             
-
-
-
-
-
-
-
-
+            if True :
+                demands = [ convertdemand(dem) for dem in self.sim.DEMANDS ]
+                db2.insertDemands( demands, e.uniqueID )
+                
 
 
 
@@ -326,11 +338,10 @@ if __name__ == '__main__' :
     import numpy as np
     import matplotlib.pyplot as plt
     
-    import setiptah.taxitheory.db.sql as experimentdb
-    
     
     parser = argparse.ArgumentParser()
     parser.add_argument( '--dbfile', type=str, default='mydata.sqlite' )
+    parser.add_argument( 'index', type=int )
     #parser.add_argument( '--cleardb', action='store_true' )
     
     #parser.add_argument( '--numveh', type=int, default=1 )
@@ -344,8 +355,14 @@ if __name__ == '__main__' :
     args, unknown_args = parser.parse_known_args()
     
     db = experimentdb.ExperimentDatabase( args.dbfile )
-    eiter = db.experimentsIter()
+    #eiter = db.experimentsIter()
     
+    ALL = True
+    if ALL :
+        experiments = [ e for e in db.experimentsIter() ]
+        
+    else :
+        experiments = [ db.getExperiment( args.index ) ]
     
     if False :
         sim = SIMULATION()
@@ -357,7 +374,7 @@ if __name__ == '__main__' :
         form = SimDialog()
         #form.eiter = [ eiter.next() ]
         #form.setExperiments( [ eiter.next() ] )
-        form.setExperiments( [ e for e in eiter ] )
+        form.setExperiments( experiments )
         form.show()
         
         sys.exit( app.exec_() )

@@ -1,6 +1,6 @@
 
 
-__all__ = [ 'ExperimentDatabase', 'ExperimentRecord' ]
+__all__ = [ 'ExperimentDatabase', 'ExperimentRecord', 'DemandRecord' ]
 
 class ExperimentDatabase :
     
@@ -66,8 +66,19 @@ class ExperimentRecord :
 
 class DemandRecord :
     def __init__(self) :
-        self.experiment = None
-
+        #self.experimentID = None
+        
+        self.origin = None
+        self.destination = None
+        
+        self.arrival_time = None
+        self.embark_time = None
+        self.delivery_time = None
+        
+        self.wait_dur = None
+        self.carry_dur = None
+        self.system_dur = None
+        
 
 
 

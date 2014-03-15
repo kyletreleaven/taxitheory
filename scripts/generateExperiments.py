@@ -20,9 +20,11 @@ if __name__ == '__main__' :
     parser.add_argument( '--distr', type=str, default='PairUniform2' )
     parser.add_argument( '--policy', type=str, default='STACKERCRANE')
     
+    parser.add_argument( '--phasedil', type=float, default=2. )
+    
     # etc...
     INITDUR = 50.
-    TIMEFACTOR = 2.
+    #TIMEFACTOR = 2.
     THRESHFACTOR = 1.1
     EXPLOITRATIO = 2.
     
@@ -59,7 +61,7 @@ if __name__ == '__main__' :
         e.setRate( rate )
         
         e.setInitialDuration( INITDUR )
-        e.setTimeDilation( TIMEFACTOR )
+        e.setTimeDilation( args.phasedil )
         e.setGrowthThreshold( THRESHFACTOR )
         e.setExploitRatio( EXPLOITRATIO )
         

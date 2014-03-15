@@ -68,9 +68,11 @@ class PairUniform2(Distribution) :
 
     
 class PairUniform3(Distribution) :
+    DIM = 3
+    
     def sample(self) :
-        x = np.random.rand(3)
-        y = np.random.rand(3)
+        x = np.random.rand(self.DIM)
+        y = np.random.rand(self.DIM)
         return x, y
     
     def meancarry(self) :
@@ -80,11 +82,11 @@ class PairUniform3(Distribution) :
         return 0.       # EMD=0.
     
     def queueLengthFactor(self, rho ) :
-        return np.power( 1. - rho, -3. )
+        return np.power( 1. - rho, -self.DIM )
     
     
     def origin(self) :
-        return np.zeros(2)
+        return np.zeros(self.DIM)
     
     def distance(self, x, y ) :
         return np.linalg.norm(y-x)
