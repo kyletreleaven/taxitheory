@@ -8,6 +8,7 @@ import PyQt4.QtCore as core, PyQt4.QtGui as gui
 import setiptah.taxitheory.sql as mysql
 import setiptah.taxitheory.euclidean.distributions as distributions
 
+import setiptah.taxitheory.db.sql as edb
 DBFILENAME = None
 
 
@@ -28,6 +29,8 @@ class ExperimentsWidget(gui.QWidget) :
         self.populateUI()
         self.connectUI()
         self.layoutUI()
+        
+        self.experimentdb = edb.ExperimentDatabase( DBFILENAME )
         
         self.dbconn = sqlite3.connect(DBFILENAME)
         self.populateForm()
@@ -152,18 +155,19 @@ class ExperimentsWidget(gui.QWidget) :
         
     def populateExperiments(self) :
         self.currentExperiment.clear()
-        mysql.prepareDatabase( self.dbconn, DEBUG=False )
         
-        cur = self.dbconn.cursor()
-        for id, in cur.execute('SELECT id FROM experiments') :
-            self.currentExperiment.addItem( str(id) )
-        #self.activateExperiment()
-        
-        
+        for e in self.experimentdb.experimentsIter() :
+            idString = str( e.uniqueID )
+            
+            if not isinstance( e.uniqueID, int ) :
+                print 'non integer id encountered:', idString
+            
+            self.currentExperiment.addItem( idString )
+            
     def activateExperiment(self) :
         # download experiment data from DB
         id = self.currentExperiment.currentText()
-        e = mysql.ExperimentRecord.fromID( self.dbconn, int(id) )
+        e = self.experimentdb.getExperiment( int(id) )
         
         index = self.currDistr.findText( e.distrib_key )
         self.currDistr.setCurrentIndex( index )
@@ -186,29 +190,14 @@ class ExperimentsWidget(gui.QWidget) :
         
     def doNewExperiment(self) :
         e = self._prepareRecord()
-        fmt = e.sqlInsert()
-        tup = e.sqlTuple()
-        
-        print fmt, tup
-        
-        cur = self.dbconn.cursor()
-        cur.execute( fmt, tup )
-        self.dbconn.commit()
-        
+        self.experimentdb.addExperiment( e )
         self.populateExperiments()
         
     def doSaveExperiment(self) :
         e = self._prepareRecord()
-        fmt = e.sqlUpdate()
-        
         id = int( self.currentExperiment.currentText() )
-        tup = e.sqlTuple() + (id,)
+        self.experimentdb.updateExperiment( id, e )
         
-        print fmt, tup
-        
-        cur = self.dbconn.cursor()
-        cur.execute( fmt, tup )
-        self.dbconn.commit()
         
         
     def _prepareRecord(self) :

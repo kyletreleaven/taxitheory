@@ -80,33 +80,30 @@ class ExperimentDatabase(interface.ExperimentDatabase) :
         fmt = self.experimentSQLInsert()
         tup = self.experimentSQLTuple( experiment )
         cur.execute( fmt, tup )
+        
+        rowindex = cur.lastrowid
+        
+        self.conn.commit()
+        cur.close()
+        
+        return rowindex     # just in case
+        
+    def updateExperiment(self, id, experiment ) :
+        experiment.uniqueID = id
+        cur = self.conn.cursor()
+        fmt = self.experimentSQLUpdate()
+        tup = self.experimentSQLTuple( experiment ) + (id,)
+        cur.execute( fmt, tup )
         self.conn.commit()
         cur.close()
         
         
     def experimentsIter(self) :
         cur = self.conn.cursor()
-        
         for row in cur.execute('SELECT * FROM experiments') :
-            e = interface.ExperimentRecord()
-            e.uniqueID = int( row[0] )
+            yield self._fullRowToExperiment( row )
             
-            e.arrivalrate = float( row[1] )
-            e.numveh = int( row[2] )
-            e.vehspeed = float( row[3] )
             
-            e.init_dur = float( row[4] )
-            e.time_factor = float( row[5] )
-            e.thresh_factor = float( row[6] )
-            e.exploit_ratio = float( row[7] )
-            
-            e.distrib_key = row[8]
-            e.policy_key = row[9]
-            
-            e.status = row[10]
-            if e.status is not None : e.status = int( e.status )
-            
-            yield e
             
     """ convenient formatters """
     def experimentSQLTuple(self, e ) :
@@ -123,9 +120,9 @@ class ExperimentDatabase(interface.ExperimentDatabase) :
         distrib_key, policy_key )
         VALUES (?,?,?,?,?,?,?,?,?)
         """
-    
-    def sqlUpdate(self) :
-        fmt = """
+        
+    def experimentSQLUpdate(self) :
+        return """
         UPDATE experiments
         SET
         arrival_rate=?, num_vehicles=?, vehicle_speed=?,
@@ -133,18 +130,21 @@ class ExperimentDatabase(interface.ExperimentDatabase) :
         distrib_key=?, policy_key=?
         WHERE id=?
         """
-        return fmt
     
-    @classmethod
-    def fromID(cls, conn, id ) :
-        cur = conn.cursor()
+    def getExperiment(self, id ) :
+        cur = self.conn.cursor()
         fmt = """
         SELECT * FROM experiments WHERE id=?
         """
         cur.execute(fmt, (id,) )
         row = cur.fetchone()
+        return self._fullRowToExperiment( row )
+    
+    @classmethod
+    def _fullRowToExperiment(cls, row ) :
+        e = interface.ExperimentRecord()
+        e.uniqueID = int( row[0] )
         
-        e = cls()
         e.arrivalrate = float( row[1] )
         e.numveh = int( row[2] )
         e.vehspeed = float( row[3] )
@@ -156,8 +156,11 @@ class ExperimentDatabase(interface.ExperimentDatabase) :
         
         e.distrib_key = row[8]
         e.policy_key = row[9]
+        
+        e.status = row[10]
+        if e.status is not None : e.status = int( e.status )
+        
         return e
-    
 
 
 
