@@ -357,7 +357,7 @@ if __name__ == '__main__' :
         form = SimDialog()
         #form.eiter = [ eiter.next() ]
         #form.setExperiments( [ eiter.next() ] )
-        form.setExperiments( eiter )
+        form.setExperiments( [ e for e in eiter ] )
         form.show()
         
         sys.exit( app.exec_() )
