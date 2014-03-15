@@ -158,13 +158,30 @@ class ExperimentDatabase(interface.ExperimentDatabase) :
         
         self.conn.commit()
         cur.close()
-
+        
+    def demandsIter(self, experiment_id ) :
+        cur = self.conn.cursor()
+        fmt = """
+        SELECT * FROM results
+        WHERE experiment_id=?
+        """
+        for row in cur.execute(fmt, (experiment_id,) ) :
+            yield self._fullRowToDemand( row )
         
         
-
-
-
-
+        
+    @classmethod
+    def _fullRowToDemand(cls, row ) :
+        d = interface.DemandRecord()
+        d.arrival_time = float( row[3] )
+        
+        d.embark_time = temp = row[4]
+        if temp is not None : d.embark_time = float(temp)
+        
+        d.delivery_time = temp = row[5]
+        if temp is not None : d.delivery_time = float(temp)
+        
+        return d
 
 
 
@@ -227,7 +244,6 @@ if False :
             self.wait_dur = None
             self.carry_dur = None
             self.system_dur = None
-    
     
     TABLE_SCHEMA['results'] = """
     CREATE TABLE IF NOT EXISTS results (
