@@ -322,6 +322,28 @@ class SimulateThread(core.QThread) :
 
 
 
+def parseints( inputstr ) :
+    selection = set()
+    invalid = set()
+    
+    tokens = inputstr.split(',')
+    for i in tokens :
+        try :
+            selection.add( int(i) )
+        
+        except :
+            try :
+                token = [ int( k.strip() ) for k in i.split('-') ]
+                assert len( token ) == 2
+                
+                selection.update( xrange( token[0], token[1] + 1 ) )
+            
+            except :
+                invalid.add( i )
+                
+    print invalid
+    return selection
+
 
 
 
@@ -341,7 +363,7 @@ if __name__ == '__main__' :
     
     parser = argparse.ArgumentParser()
     parser.add_argument( '--dbfile', type=str, default='mydata.sqlite' )
-    parser.add_argument( 'index', type=int )
+    parser.add_argument( 'index', type=str )
     #parser.add_argument( '--cleardb', action='store_true' )
     
     #parser.add_argument( '--numveh', type=int, default=1 )
@@ -357,12 +379,15 @@ if __name__ == '__main__' :
     db = experimentdb.ExperimentDatabase( args.dbfile )
     #eiter = db.experimentsIter()
     
-    ALL = True
-    if ALL :
-        experiments = [ e for e in db.experimentsIter() ]
-        
+    if True :
+        experiments = [ db.getExperiment(k) for k in parseints( args.index ) ]
     else :
-        experiments = [ db.getExperiment( args.index ) ]
+        if args.index == 'all' :
+            experiments = [ e for e in db.experimentsIter() ]
+            
+        else :
+            index = int( args.index )
+            experiments = [ db.getExperiment( index ) ]
     
     if False :
         sim = SIMULATION()

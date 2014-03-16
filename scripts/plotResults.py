@@ -68,8 +68,17 @@ if __name__ == '__main__' :
         return np.mean( systimes )
     
     meansys = [ computeAverageSystemTime(e) for e in INCLUDE ]
+    labels = [ e.uniqueID for e in INCLUDE ]
     
     plt.scatter( orders, meansys )
+    for x,y,label in zip( orders, meansys, labels ) :
+        plt.annotate( label, 
+                      xy = (x, y), xytext = (-5, 5),
+                      textcoords = 'offset points', ha = 'right', va = 'bottom',
+                      #bbox = dict(boxstyle = 'round,pad=0.5', fc = 'yellow', alpha = 0.5),
+                      #arrowprops = dict(arrowstyle = '->', connectionstyle = 'arc3,rad=0'))
+                      )
+    
     plt.show()
     
     
