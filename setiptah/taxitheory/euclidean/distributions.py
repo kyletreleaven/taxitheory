@@ -2,6 +2,7 @@
 import numpy as np
 import scipy.optimize as opt
 
+
 """ TODO: port over those bastards from DynPDP """
 
 
@@ -41,7 +42,7 @@ class Distribution :
     
     
 # Uniform Statistics from:
-# http://mathworld.wolfram.com/HypercubeLinePicking.html
+
 
 class PairUniform2(Distribution) :
     def sample(self) :
@@ -50,6 +51,7 @@ class PairUniform2(Distribution) :
         return x, y
     
     def meancarry(self) :
+        # http://mathworld.wolfram.com/HypercubeLinePicking.html
         return 0.5214054331
     
     def meanfetch(self) :
@@ -65,7 +67,6 @@ class PairUniform2(Distribution) :
     def distance(self, x, y ) :
         return np.linalg.norm(y-x)
     
-
     
 class PairUniform3(Distribution) :
     DIM = 3
@@ -76,6 +77,7 @@ class PairUniform3(Distribution) :
         return x, y
     
     def meancarry(self) :
+        # http://mathworld.wolfram.com/HypercubeLinePicking.html
         return 0.6617071822
     
     def meanfetch(self) :
@@ -90,12 +92,56 @@ class PairUniform3(Distribution) :
     
     def distance(self, x, y ) :
         return np.linalg.norm(y-x)
-
+    
+    
+    
+class Cocentric3_1_2(Distribution) :
+    DIM = 3
+    ORIGSRADIUS = 2.
+    DESTSRADIUS = 1.
+    
+    @classmethod
+    def uniformsphere(cls, dim ) :
+        while True :
+            coord = 2. * np.random.rand(dim) - 1.
+            if np.linalg.norm(coord) <= 1. : break
+            
+        return coord
+        
+    def sample(self) :
+        x = self.ORIGSRADIUS * self.uniformsphere(3)
+        y = self.DESTSRADIUS * self.uniformsphere(3)
+        return x, y
+    
+    def meancarry(self) :
+        # best estimate from monte carlo, with
+        # ORIGSRADIUS = 2. and DESTSRADIUS = 1.
+        return 1.6479
+        
+    def meanfetch(self) :
+        return 3. * abs( self.ORIGSRADIUS - self.DESTSRADIUS ) / 4
+    
+    
+    def queueLengthFactor(self, rho ) :
+        return np.power( 1. - rho, -self.DIM )
+    
+    def origin(self) :
+        return np.zeros(self.DIM)
+    
+    def distance(self, x, y ) :
+        return np.linalg.norm(y-x)
+    
+    
+    
+    
+    
+    
     
     
 distributions = {}
 distributions['PairUniform2'] = PairUniform2()
 distributions['PairUniform3'] = PairUniform3()
+distributions['Cocentric3_1_2'] = Cocentric3_1_2()
 
 
 
