@@ -2,6 +2,7 @@
 import numpy as np
 import scipy.optimize as opt
 
+import setiptah.taxitheory.euclidean.constants as eucconst
 
 """ TODO: port over those bastards from DynPDP """
 
@@ -25,6 +26,9 @@ class Distribution :
     def queueLengthFactor(self, rho ) :
         raise NotImplementedError('abstract')
     
+    def boundConstants(self) :
+        return {}
+    
     def inverseQueueLengthFactor(self, g ) :
         """
         comput rho to achieve a certain queue length multiplier;
@@ -38,12 +42,13 @@ class Distribution :
         
         objective = lambda rho : self.queueLengthFactor( rho ) - g
         return opt.bisect( objective, 1.-2*ohr, 1.-ohr )
-
     
     
-# Uniform Statistics from:
-
-
+    
+    
+    
+""" The Separably I.I.D, Uniform, and Cubic Distributions """
+    
 class PairUniform2(Distribution) :
     def sample(self) :
         x = np.random.rand(2)
@@ -93,7 +98,37 @@ class PairUniform3(Distribution) :
     def distance(self, x, y ) :
         return np.linalg.norm(y-x)
     
+    def boundConstants(self) :
+        """
+        origin-fair and general lower bounds;
+        EMD = 0, so they are actually *valid*  
+        """
+        # \gamma_d
+        LBConst = eucconst.GAMMA3
+        # \int_\env \den^{(d-1)/d} \ dx
+        integral_fair = 1.
+        # \int_\env \den^{d/(d+1)} \ dx
+        integral_general = 1.
+        
+        carry = self.meancarry()
+        
+        """
+        Stacker Crane policy upper bound
+        """
+        UBConst = eucconst.BETAMATCH3
+        pow = lambda a,d : np.power(a,d)
+        
+        bounds = {}
+        bounds['lower fair'] = pow( LBConst * integral_fair, 3. ) / pow( carry, 2. )
+        bounds['lower general'] = pow(LBConst,3.) * pow(integral_fair,4.) / pow(carry,2.)
+        bounds['upper'] = pow( UBConst * integral_fair, 3. ) / pow( carry, 2. )
+        
+        return bounds
     
+    
+    
+    
+""" TAC2013? Distributions """
     
 class Cocentric3_1_2(Distribution) :
     DIM = 3
@@ -114,13 +149,12 @@ class Cocentric3_1_2(Distribution) :
         return x, y
     
     def meancarry(self) :
-        # best estimate from monte carlo, with
+        # best estimate from monte carlo (montecarlo.py), with
         # ORIGSRADIUS = 2. and DESTSRADIUS = 1.
         return 1.6479
         
     def meanfetch(self) :
-        return 3. * abs( self.ORIGSRADIUS - self.DESTSRADIUS ) / 4
-    
+        return (3./4) * abs( self.ORIGSRADIUS - self.DESTSRADIUS )
     
     def queueLengthFactor(self, rho ) :
         return np.power( 1. - rho, -self.DIM )
@@ -130,6 +164,33 @@ class Cocentric3_1_2(Distribution) :
     
     def distance(self, x, y ) :
         return np.linalg.norm(y-x)
+    
+    def boundConstants(self) :
+        """
+        origin-fair and general lower bounds;
+        EMD = 0, so they are actually *valid*  
+        """
+        # \gamma_d^d
+        LBConst = eucconst.GAMMA3**3.
+        # \int_\env \den^{(d-1)/d} \ dx
+        # \oden := ( (4/3)\pi r^3 )^{-1} within rho < r
+        # \dden := ( (4/3)\pi R^3 )^{-1} within rho < R
+        integral_fair = np.power( eucconst.SPHEREVOL3, 1./3 ) * self.DESTSRADIUS
+        # \left[ \int_\env \den^{d/(d+1)} \right]^{d+1} 
+        #integral_general = 
+        
+        """
+        Stacker Crane policy upper bound
+        """
+        UBConst = eucconst.BETAMATCH3
+        
+        bounds = {
+                  'lower' : LBConst * integral_fair,
+                  'upper' : UBConst * integral_fair,
+                  #'upper+tsp' : UBConst + eucconst.BETATSP3 * integral_fair
+                  }
+        
+        return {}
     
     
     

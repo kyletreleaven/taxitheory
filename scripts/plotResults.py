@@ -70,14 +70,35 @@ if __name__ == '__main__' :
     meansys = [ computeAverageSystemTime(e) for e in INCLUDE ]
     labels = [ e.uniqueID for e in INCLUDE ]
     
-    plt.scatter( orders, meansys )
-    for x,y,label in zip( orders, meansys, labels ) :
-        plt.annotate( label, 
-                      xy = (x, y), xytext = (-5, 5),
-                      textcoords = 'offset points', ha = 'right', va = 'bottom',
-                      #bbox = dict(boxstyle = 'round,pad=0.5', fc = 'yellow', alpha = 0.5),
-                      #arrowprops = dict(arrowstyle = '->', connectionstyle = 'arc3,rad=0'))
-                      )
+    if True :       # show lines
+        plt.scatter( orders, meansys )
+        for x,y,label in zip( orders, meansys, labels ) :
+            plt.annotate( label, 
+                          xy = (x, y), xytext = (-5, 5),
+                          textcoords = 'offset points', ha = 'right', va = 'bottom',
+                          #bbox = dict(boxstyle = 'round,pad=0.5', fc = 'yellow', alpha = 0.5),
+                          #arrowprops = dict(arrowstyle = '->', connectionstyle = 'arc3,rad=0'))
+                          )
+            
+        bounds = distr.boundConstants()
+        for c in bounds.itervalues() :
+            line = [ c * x for x in orders ]
+            plt.plot( orders, line, '--' )
+            
+    else :          # show levels
+        plt.scatter( orders, [ st / n for n, st in zip( orders, meansys ) ] )
+        for x,y,label in zip( orders, meansys, labels ) :
+            plt.annotate( label, 
+                          xy = (x, y/x), xytext = (-5, 5),
+                          textcoords = 'offset points', ha = 'right', va = 'bottom',
+                          #bbox = dict(boxstyle = 'round,pad=0.5', fc = 'yellow', alpha = 0.5),
+                          #arrowprops = dict(arrowstyle = '->', connectionstyle = 'arc3,rad=0'))
+                          )
+            
+        bounds = distr.boundConstants()
+        for c in bounds.itervalues() :
+            line = [ c for x in orders ]
+            plt.plot( orders, line, '--' )
     
     plt.show()
     
