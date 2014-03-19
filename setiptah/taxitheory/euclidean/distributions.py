@@ -26,6 +26,9 @@ class Distribution :
     def queueLengthFactor(self, rho ) :
         raise NotImplementedError('abstract')
     
+    def horizontalAxisLabel(self) :
+        return None
+    
     def boundConstants(self) :
         return {}
     
@@ -90,7 +93,6 @@ class PairUniform3(Distribution) :
     
     def queueLengthFactor(self, rho ) :
         return np.power( 1. - rho, -self.DIM )
-    
     
     def origin(self) :
         return np.zeros(self.DIM)
@@ -166,31 +168,25 @@ class Cocentric3_1_2(Distribution) :
         return np.linalg.norm(y-x)
     
     def boundConstants(self) :
-        """
-        origin-fair and general lower bounds;
-        EMD = 0, so they are actually *valid*  
-        """
-        # \gamma_d^d
-        LBConst = eucconst.GAMMA3**3.
-        # \int_\env \den^{(d-1)/d} \ dx
-        # \oden := ( (4/3)\pi r^3 )^{-1} within rho < r
-        # \dden := ( (4/3)\pi R^3 )^{-1} within rho < R
-        integral_fair = np.power( eucconst.SPHEREVOL3, 1./3 ) * self.DESTSRADIUS
-        # \left[ \int_\env \den^{d/(d+1)} \right]^{d+1} 
-        #integral_general = 
-        
+        """ only upper bounds are valid """
         """
         Stacker Crane policy upper bound
         """
         UBConst = eucconst.BETAMATCH3
+        pow = lambda a,d : np.power(a,d)
         
-        bounds = {
-                  'lower' : LBConst * integral_fair,
-                  'upper' : UBConst * integral_fair,
-                  #'upper+tsp' : UBConst + eucconst.BETATSP3 * integral_fair
-                  }
+        # see thesis, special bounds appendix
+        integral_fair = pow( (4./3)*np.pi * self.DESTSRADIUS, 1./3 )
+        integral_fair_optimistic = pow( (4./3)*np.pi, 1./3 ) * self.DESTSRADIUS * pow( self.DESTSRADIUS / self.ORIGSRADIUS, 2. )
+        moverscplx = self.meancarry() + self.meanfetch()
         
-        return {}
+        bounds = {}
+        bounds['upper'] = pow( UBConst * integral_fair, 3. ) / pow( moverscplx, 2. )
+        bounds['upper conjecture'] = pow( UBConst * integral_fair_optimistic, 3. ) / pow( moverscplx, 2. )
+        
+        #bounds = {}
+        return bounds
+    
     
     
     
