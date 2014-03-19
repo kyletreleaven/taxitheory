@@ -29,6 +29,20 @@ if __name__ == '__main__' :
     import argparse
     
     import numpy as np
+    
+    # plotting
+    import matplotlib as mpl
+    if True :
+        #mpl.rcParams['ps.useafm'] = True
+        #mpl.rcParams['pdf.use14corefonts'] = True
+        #mpl.rcParams['text.usetex'] = True
+        
+        font = {
+                #'family' : 'normal',
+                #'weight' : 'bold',
+                'size'   : 18 }
+        mpl.rc('font', **font)
+    
     import matplotlib.pyplot as plt
     
     
@@ -39,6 +53,7 @@ if __name__ == '__main__' :
     parser.add_argument( 'distr', type=str, default='PairUniform2' )
     parser.add_argument( '--numveh', type=int, default=1 )
     parser.add_argument( '--vehspeed', type=float, default=1. )
+    parser.add_argument( '--nonum', action='store_true' )
     
     args, unknown_args = parser.parse_known_args()
     
@@ -72,13 +87,15 @@ if __name__ == '__main__' :
     
     if True :       # show lines
         plt.scatter( orders, meansys )
-        for x,y,label in zip( orders, meansys, labels ) :
-            plt.annotate( label, 
-                          xy = (x, y), xytext = (-5, 5),
-                          textcoords = 'offset points', ha = 'right', va = 'bottom',
-                          #bbox = dict(boxstyle = 'round,pad=0.5', fc = 'yellow', alpha = 0.5),
-                          #arrowprops = dict(arrowstyle = '->', connectionstyle = 'arc3,rad=0'))
-                          )
+        
+        if not args.nonum :
+            for x,y,label in zip( orders, meansys, labels ) :
+                plt.annotate( label, 
+                              xy = (x, y), xytext = (-5, 5),
+                              textcoords = 'offset points', ha = 'right', va = 'bottom',
+                              #bbox = dict(boxstyle = 'round,pad=0.5', fc = 'yellow', alpha = 0.5),
+                              #arrowprops = dict(arrowstyle = '->', connectionstyle = 'arc3,rad=0'))
+                              )
             
         bounds = distr.boundConstants()
         for c in bounds.itervalues() :
@@ -87,19 +104,48 @@ if __name__ == '__main__' :
             
     else :          # show levels
         plt.scatter( orders, [ st / n for n, st in zip( orders, meansys ) ] )
-        for x,y,label in zip( orders, meansys, labels ) :
-            plt.annotate( label, 
-                          xy = (x, y/x), xytext = (-5, 5),
-                          textcoords = 'offset points', ha = 'right', va = 'bottom',
-                          #bbox = dict(boxstyle = 'round,pad=0.5', fc = 'yellow', alpha = 0.5),
-                          #arrowprops = dict(arrowstyle = '->', connectionstyle = 'arc3,rad=0'))
-                          )
+        
+        if not args.nonum :
+            for x,y,label in zip( orders, meansys, labels ) :
+                plt.annotate( label, 
+                              xy = (x, y/x), xytext = (-5, 5),
+                              textcoords = 'offset points', ha = 'right', va = 'bottom',
+                              #bbox = dict(boxstyle = 'round,pad=0.5', fc = 'yellow', alpha = 0.5),
+                              #arrowprops = dict(arrowstyle = '->', connectionstyle = 'arc3,rad=0'))
+                              )
             
         bounds = distr.boundConstants()
         for c in bounds.itervalues() :
             line = [ c for x in orders ]
             plt.plot( orders, line, '--' )
     
+    # axes
+    ax1 = plt.gca()
+    ax2 = ax1.twiny()   # for utilization
+    
+    o1, o2 = ax1.get_xlim()
+    o1 = max(1.,o1)
+    #print o1, o2
+    numticks = 6
+    if False :
+        rho1 = distr.inverseQueueLengthFactor(o1)
+        rho2 = distr.inverseQueueLengthFactor(o2)
+        rhoticks = np.linspace(rho1,rho2, numticks+2 )[1:-1]
+        ticks = [ distr.queueLengthFactor(rho) for rho in rhoticks ]
+        
+    else :
+        ticks = np.linspace(o1,o2, numticks+2 )[1:-1]
+        rhoticks = [ distr.inverseQueueLengthFactor(o) for o in ticks ]
+        
+    ticklabels = [ '%.3f' % rho for rho in rhoticks ]
+    ax2.set_xticks( ticks )
+    ax2.set_xticklabels( ticklabels )
+    #ax2.set_xlabel(r"Modified x-axis: $1/(1+X)$")
+    
+    xlabel = distr.horizontalAxisLabel()
+    if xlabel is not None :
+        plt.xlabel( xlabel )
+        
     plt.show()
     
     
