@@ -1,4 +1,6 @@
 
+import random, itertools
+
 import numpy as np
 import scipy.optimize as opt
 
@@ -49,13 +51,108 @@ class Distribution :
     
     
     
+class EuclideanDistribution(Distribution) :
+    DIM = None     # needs to be overwritten
+    
+    def origin(self) : return np.zeros(self.DIM)
+    
+    def distance(self, x, y ) : return np.linalg.norm( y - x )
+    
+    @classmethod
+    def uniformcube_centered(cls, dim=None ) :
+        if dim is None : dim = cls.DIM
+        return np.random.rand(dim) - .5
+    
+    @classmethod
+    def uniformsphere(cls, dim=None ) :
+        while True :
+            coord = 2. * cls.uniformcube_centered(dim)
+            #coord = 2. * np.random.rand(dim) - 1.
+            if np.linalg.norm(coord) <= 1. : break
+            
+        return coord
+    
+    
+    def visualize(self, samples=None ) :
+        import matplotlib.pyplot as plt
+        fig = plt.figure()
+        
+        if samples is None : samples = 1000
+        
+        if self.DIM == 2 :
+            ax = fig.add_subplot(1,1,1)
+            
+            def split( points2 ) :
+                temp = [ p for p in points2 ]
+                X = [ x for x,y in temp ]
+                Y = [ y for x,y in temp ]
+                return X, Y
+            
+            def scatter( ax, demands ) :
+                T = ( self.getTail(dem) for dem in demands )
+                X1, Y1 = split(T)
+                
+                H = ( self.getHead(dem) for dem in demands )
+                X2, Y2 = split(H)
+                
+                ax.scatter( X1, Y1, color='red' )
+                ax.scatter( X2, Y2, color='blue' )
+                
+        elif self.DIM == 3 :
+            from mpl_toolkits.mplot3d import Axes3D     # do I need?
+            ax = fig.add_subplot(111, projection='3d')
+            
+            def split( points3 ) :
+                temp = [ p for p in points3 ]
+                X = [ x for x,y,z in temp ]
+                Y = [ y for x,y,z in temp ]
+                Z = [ z for x,y,z in temp ]
+                return X, Y, Z
+            
+            def scatter( ax, demands ) :
+                T = ( self.getTail(dem) for dem in demands )
+                H = ( self.getHead(dem) for dem in demands )
+                
+                X1, Y1, Z1 = split(T)
+                X2, Y2, Z2 = split(H)
+                
+                ax.scatter( X1, Y1, Z1, color='red' )
+                ax.scatter( X2, Y2, Z2, color='blue' )
+            
+        else :
+            raise NotImplementedError('only can do d=2 or d=3')
+        
+        demands = [ self.sample() for i in xrange(samples) ]
+        scatter( ax, demands )
+        #ax.set_aspect('equal')
+        
+        plt.show()
+    
+    
+    
+    
+class PlanarDistribution(EuclideanDistribution) :
+    DIM = 2
+    
+    def queueLengthFactor(self, rho ) :
+        return -np.log( 1. - rho ) * np.power( 1. - rho, -2. )
+
+    
+class CubicDistribution(EuclideanDistribution) :
+    DIM = 3
+    
+    def queueLengthFactor(self, rho ) :
+        return np.power( 1. - rho, -3. )
+    
+    
+    
     
 """ The Separably I.I.D, Uniform, and Cubic Distributions """
     
-class PairUniform2(Distribution) :
+class PairUniform2(PlanarDistribution) :
     def sample(self) :
-        x = np.random.rand(2)
-        y = np.random.rand(2)
+        x = np.random.rand(self.DIM)
+        y = np.random.rand(self.DIM)
         return x, y
     
     def meancarry(self) :
@@ -65,20 +162,11 @@ class PairUniform2(Distribution) :
     def meanfetch(self) :
         return 0.       # EMD=0.
     
-    def queueLengthFactor(self, rho ) :
-        return -np.log( 1. - rho ) * np.power( 1. - rho, -2. )
     
     
-    def origin(self) :
-        return np.zeros(2)
-    
-    def distance(self, x, y ) :
-        return np.linalg.norm(y-x)
     
     
-class PairUniform3(Distribution) :
-    DIM = 3
-    
+class PairUniform3(CubicDistribution) :
     def sample(self) :
         x = np.random.rand(self.DIM)
         y = np.random.rand(self.DIM)
@@ -90,15 +178,6 @@ class PairUniform3(Distribution) :
     
     def meanfetch(self) :
         return 0.       # EMD=0.
-    
-    def queueLengthFactor(self, rho ) :
-        return np.power( 1. - rho, -self.DIM )
-    
-    def origin(self) :
-        return np.zeros(self.DIM)
-    
-    def distance(self, x, y ) :
-        return np.linalg.norm(y-x)
     
     def boundConstants(self) :
         """
@@ -132,22 +211,13 @@ class PairUniform3(Distribution) :
     
 """ TAC2013? Distributions """
     
-class Cocentric3_1_2(Distribution) :
-    DIM = 3
-    ORIGSRADIUS = 2.
-    DESTSRADIUS = 1.
+class Cocentric3_1_2(CubicDistribution) :
+    R = 2.
+    r = 1.
     
-    @classmethod
-    def uniformsphere(cls, dim ) :
-        while True :
-            coord = 2. * np.random.rand(dim) - 1.
-            if np.linalg.norm(coord) <= 1. : break
-            
-        return coord
-        
     def sample(self) :
-        x = self.ORIGSRADIUS * self.uniformsphere(3)
-        y = self.DESTSRADIUS * self.uniformsphere(3)
+        x = self.r * self.uniformsphere(3)
+        y = self.R * self.uniformsphere(3)
         return x, y
     
     def meancarry(self) :
@@ -156,16 +226,7 @@ class Cocentric3_1_2(Distribution) :
         return 1.6479
         
     def meanfetch(self) :
-        return (3./4) * abs( self.ORIGSRADIUS - self.DESTSRADIUS )
-    
-    def queueLengthFactor(self, rho ) :
-        return np.power( 1. - rho, -self.DIM )
-    
-    def origin(self) :
-        return np.zeros(self.DIM)
-    
-    def distance(self, x, y ) :
-        return np.linalg.norm(y-x)
+        return (3./4) * ( self.R - self.r )
     
     def boundConstants(self) :
         """ only upper bounds are valid """
@@ -176,8 +237,8 @@ class Cocentric3_1_2(Distribution) :
         pow = lambda a,d : np.power(a,d)
         
         # see thesis, special bounds appendix
-        integral_fair = pow( (4./3)*np.pi * self.DESTSRADIUS, 1./3 )
-        integral_fair_optimistic = pow( (4./3)*np.pi, 1./3 ) * self.DESTSRADIUS * pow( self.DESTSRADIUS / self.ORIGSRADIUS, 2. )
+        integral_fair = pow( (4./3)*np.pi * self.r, 1./3 )
+        integral_fair_optimistic = pow( (4./3)*np.pi, 1./3 ) * self.r * pow( self.r / self.R, 2. )
         moverscplx = self.meancarry() + self.meanfetch()
         
         bounds = {}
@@ -188,9 +249,33 @@ class Cocentric3_1_2(Distribution) :
         return bounds
     
     
+class XO_X_O(CubicDistribution) :
+    LEFT = np.array([ -4, 0, 0 ])
+    MIDDLE = np.array([ -2, 0, 0 ])
+    RIGHT = np.array([ 2, 0, 0 ])
     
+    def sample(self) :
+        x = random.choice([ self.LEFT, self.MIDDLE ])
+        x = x + self.uniformcube_centered()
+        
+        y = random.choice([ self.LEFT, self.RIGHT ])
+        y = y + self.uniformcube_centered()
+        
+        return x,y
+        
+    def meancarry(self) :
+        return 3.205        # Monte Carlo
+        
+    def meanfetch(self) :
+        return .5 * 4.
     
-    
+    def boundConstants(self) :
+        return {}       # for now
+        
+        
+        
+class X_XO_O(CubicDistribution) :
+    pass
     
     
     
@@ -199,6 +284,7 @@ distributions = {}
 distributions['PairUniform2'] = PairUniform2()
 distributions['PairUniform3'] = PairUniform3()
 distributions['Cocentric3_1_2'] = Cocentric3_1_2()
+distributions['XO_X_O'] = XO_X_O()
 
 
 
