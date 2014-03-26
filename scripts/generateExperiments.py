@@ -37,7 +37,7 @@ if __name__ == '__main__' :
     """ start script """
     args, unknown_args = parser.parse_known_args()
     
-    import setiptah.taxitheory.euclidean.distributions as distribs
+    import setiptah.taxitheory.distributions as distribs
     distr = distribs.distributions[ args.distr ]
     
     G = np.logspace( np.log10( args.ordermin ), np.log10( args.ordermax ),
@@ -58,7 +58,8 @@ if __name__ == '__main__' :
         e.setFleetSize( args.numveh )
         e.setFleetSpeed( args.vehspeed )
         
-        e.setRate( rate )
+        #e.setRate( rate )
+        e.setRate( float(rate) )        # sympy is being annoying
         
         e.setInitialDuration( INITDUR )
         e.setTimeDilation( args.phasedil )

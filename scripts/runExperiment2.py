@@ -13,7 +13,7 @@ from setiptah.dyvehr.euclidean import EuclideanPlanner
 from setiptah.dyvehr.taxi import Taxi, GatedTaxiDispatch
 from setiptah.dyvehr.taxi import RoundRobinScheduler, kCraneScheduler
 
-import setiptah.taxitheory.euclidean.distributions as distribs
+import setiptah.taxitheory.distributions as distribs
 
 import setiptah.taxitheory.db.sql as experimentdb
 
@@ -61,7 +61,7 @@ class SIMULATION :
             ORIGIN = samplepoint()
             
             distance = lambda x, y : ROAD.distance( roadmap, 
-                                                    x, y, length='length' )
+                                                    x, y, weight='length' )
             planner = RoadmapPlanner( roadmap )
             
             if True :
@@ -393,20 +393,10 @@ if __name__ == '__main__' :
     parser = argparse.ArgumentParser()
     parser.add_argument( '--dbfile', type=str, default='mydata.sqlite' )
     parser.add_argument( 'index', type=str )
-    #parser.add_argument( '--cleardb', action='store_true' )
     
-    #parser.add_argument( '--numveh', type=int, default=1 )
-    #parser.add_argument( '--vehspeed', type=float, default=1. )
-    #parser.add_argument( '--distr', type=str, default='PairUniform2' )
-    #parser.add_argument( '--policy', type=str, default='STACKERCRANE')
-    
-    #parser.add_argument( 'N', type=int )
-    #parser.add_argument( '--ordermin', type=float, default=1. )
-    #parser.add_argument( '--ordermax', type=float, default=10. )
     args, unknown_args = parser.parse_known_args()
     
     db = experimentdb.ExperimentDatabase( args.dbfile )
-    #eiter = db.experimentsIter()
     
     if True :
         experiments = [ db.getExperiment(k) for k in parseints( args.index ) ]
