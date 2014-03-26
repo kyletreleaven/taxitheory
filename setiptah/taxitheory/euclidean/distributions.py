@@ -2,55 +2,11 @@
 import random, itertools
 
 import numpy as np
-import scipy.optimize as opt
 
+from setiptah.taxitheory.distributions.interface import Distribution
 import setiptah.taxitheory.euclidean.constants as eucconst
 
-""" TODO: port over those bastards from DynPDP """
 
-
-class Distribution :
-    def sample(self) :
-        raise NotImplementedError('abstract')
-    
-    def getTail(self, pair ) :
-        return pair[0]
-    
-    def getHead(self, pair ) :
-        return pair[1]
-    
-    def meancarry(self) :
-        raise NotImplementedError('abstract')
-    
-    def meanfetch(self) :
-        raise NotImplementedError('abstract')
-    
-    def queueLengthFactor(self, rho ) :
-        raise NotImplementedError('abstract')
-    
-    def horizontalAxisLabel(self) :
-        return None
-    
-    def boundConstants(self) :
-        return {}
-    
-    def inverseQueueLengthFactor(self, g ) :
-        """
-        comput rho to achieve a certain queue length multiplier;
-        assumes, rightfully, monotonicity
-        """
-        assert g >= 0.
-        if g == 0. : return 0.
-        # otherwise
-        ohr = 1.
-        while self.queueLengthFactor( 1.-ohr ) <= g : ohr *= .5
-        
-        objective = lambda rho : self.queueLengthFactor( rho ) - g
-        return opt.bisect( objective, 1.-2*ohr, 1.-ohr )
-    
-    
-    
-    
 class EuclideanDistribution(Distribution) :
     DIM = None     # needs to be overwritten
     
@@ -73,54 +29,74 @@ class EuclideanDistribution(Distribution) :
         return coord
     
     
+class PlanarDistribution(EuclideanDistribution) :
+    DIM = 2
+    
+    def queueLengthFactor(self, rho ) :
+        return -np.log( 1. - rho ) * np.power( 1. - rho, -2. )
+    
     def visualize(self, samples=None ) :
         import matplotlib.pyplot as plt
         fig = plt.figure()
         
         if samples is None : samples = 1000
         
-        if self.DIM == 2 :
-            ax = fig.add_subplot(1,1,1)
+        ax = fig.add_subplot(1,1,1)
+        
+        def split( points2 ) :
+            temp = [ p for p in points2 ]
+            X = [ x for x,y in temp ]
+            Y = [ y for x,y in temp ]
+            return X, Y
+        
+        def scatter( ax, demands ) :
+            T = ( self.getTail(dem) for dem in demands )
+            X1, Y1 = split(T)
             
-            def split( points2 ) :
-                temp = [ p for p in points2 ]
-                X = [ x for x,y in temp ]
-                Y = [ y for x,y in temp ]
-                return X, Y
+            H = ( self.getHead(dem) for dem in demands )
+            X2, Y2 = split(H)
             
-            def scatter( ax, demands ) :
-                T = ( self.getTail(dem) for dem in demands )
-                X1, Y1 = split(T)
-                
-                H = ( self.getHead(dem) for dem in demands )
-                X2, Y2 = split(H)
-                
-                ax.scatter( X1, Y1, color='red' )
-                ax.scatter( X2, Y2, color='blue' )
-                
-        elif self.DIM == 3 :
-            from mpl_toolkits.mplot3d import Axes3D     # do I need?
-            ax = fig.add_subplot(111, projection='3d')
+            ax.scatter( X1, Y1, color='red' )
+            ax.scatter( X2, Y2, color='blue' )
             
-            def split( points3 ) :
-                temp = [ p for p in points3 ]
-                X = [ x for x,y,z in temp ]
-                Y = [ y for x,y,z in temp ]
-                Z = [ z for x,y,z in temp ]
-                return X, Y, Z
+        demands = [ self.sample() for i in xrange(samples) ]
+        scatter( ax, demands )
+        #ax.set_aspect('equal')
+        
+        plt.show()
+
+    
+class CubicDistribution(EuclideanDistribution) :
+    DIM = 3
+    
+    def queueLengthFactor(self, rho ) :
+        return np.power( 1. - rho, -3. )
+    
+    def visualize(self, samples=None ) :
+        import matplotlib.pyplot as plt
+        fig = plt.figure()
+        
+        if samples is None : samples = 1000
+        
+        from mpl_toolkits.mplot3d import Axes3D     # do I need?
+        ax = fig.add_subplot(111, projection='3d')
+        
+        def split( points3 ) :
+            temp = [ p for p in points3 ]
+            X = [ x for x,y,z in temp ]
+            Y = [ y for x,y,z in temp ]
+            Z = [ z for x,y,z in temp ]
+            return X, Y, Z
+        
+        def scatter( ax, demands ) :
+            T = ( self.getTail(dem) for dem in demands )
+            H = ( self.getHead(dem) for dem in demands )
             
-            def scatter( ax, demands ) :
-                T = ( self.getTail(dem) for dem in demands )
-                H = ( self.getHead(dem) for dem in demands )
-                
-                X1, Y1, Z1 = split(T)
-                X2, Y2, Z2 = split(H)
-                
-                ax.scatter( X1, Y1, Z1, color='red' )
-                ax.scatter( X2, Y2, Z2, color='blue' )
+            X1, Y1, Z1 = split(T)
+            X2, Y2, Z2 = split(H)
             
-        else :
-            raise NotImplementedError('only can do d=2 or d=3')
+            ax.scatter( X1, Y1, Z1, color='red' )
+            ax.scatter( X2, Y2, Z2, color='blue' )
         
         demands = [ self.sample() for i in xrange(samples) ]
         scatter( ax, demands )
@@ -131,24 +107,18 @@ class EuclideanDistribution(Distribution) :
     
     
     
-class PlanarDistribution(EuclideanDistribution) :
-    DIM = 2
     
-    def queueLengthFactor(self, rho ) :
-        return -np.log( 1. - rho ) * np.power( 1. - rho, -2. )
-
     
-class CubicDistribution(EuclideanDistribution) :
-    DIM = 3
     
-    def queueLengthFactor(self, rho ) :
-        return np.power( 1. - rho, -3. )
+    
+    
+    
     
     
     
     
 """ The Separably I.I.D, Uniform, and Cubic Distributions """
-    
+
 class PairUniform2(PlanarDistribution) :
     def sample(self) :
         x = np.random.rand(self.DIM)
@@ -278,13 +248,7 @@ class X_XO_O(CubicDistribution) :
     pass
     
     
-    
-    
-distributions = {}
-distributions['PairUniform2'] = PairUniform2()
-distributions['PairUniform3'] = PairUniform3()
-distributions['Cocentric3_1_2'] = Cocentric3_1_2()
-distributions['XO_X_O'] = XO_X_O()
+""" TODO: port over those bastards from DynPDP """
 
 
 
@@ -296,11 +260,26 @@ def utilizationToRate( util, moverscplx, numveh=1, vehspeed=1. ) :
 
 
 
+
+
+__all__ = [
+           'EuclideanDistribution',
+           'PlanarDistribution',
+           'CubicDistribution',
+           'PairUniform2',
+           'PairUniform3',
+           'Cocentric3_1_2',
+           'XO_X_O',
+           ]
+
+
+
 if __name__ == '__main__' :
     import matplotlib.pyplot as plt
     plt.close('all')
     
-    distr = distributions['PairUniform2']
+    #distr = distributions['PairUniform2']
+    distr = PairUniform2()
     
     rho = np.linspace(0,1,500+2)[1:-1]
     F = distr.queueLengthFactor(rho)
@@ -310,6 +289,9 @@ if __name__ == '__main__' :
     
     plt.plot(rho,F)
     plt.scatter( rhostar, G, marker='x' )
+    
+    distr.visualize()
+    
     plt.show()
     
     

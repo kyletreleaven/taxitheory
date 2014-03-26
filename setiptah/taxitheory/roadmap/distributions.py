@@ -1,12 +1,31 @@
 
+import numpy as np
 import networkx as nx
 
 import setiptah.roadgeometry.roadmap_basic as ROAD
 import setiptah.roadgeometry.probability as roadprob
 
-import setiptah
+import setiptah.roadearthmover.road_Ed as roadEd
+import setiptah.roadearthmover.roademd as roademd
 
-class Distribution : pass
+from setiptah.taxitheory.distributions.interface import Distribution
+
+
+class RoadmapDistribution(Distribution) :
+    def __init__(self, roadmap, length_attr ) :
+        #super(RoadmapDistribution,self).__init__()
+        self.roadmap = roadmap
+        self.length_attr = length_attr
+    
+    def origin(self) :
+        _,__, road = self.roadmap.edges_iter( keys=True ).next()
+        return ROAD.RoadAddress( road, 0. )
+    
+    def distance(self, x, y ) :
+        return ROAD.distance( self.roadmap, x, y, weight=self.length_attr )
+    
+    def queueLengthFactor(self, rho ) :
+        return np.power( 1 - rho, -2. )     # presumably...
 
 
 
@@ -19,23 +38,35 @@ def ACC2014Square() :
     roadmap.add_edge(3,0,'W', length=1. )
     
     return roadmap
-    
-
-class ACC2014Distr(Distribution) : pass
 
 
+class ACC2014Distr(RoadmapDistribution) : pass
 
 
-class PairUniformRoadmap(Distribution) :
+
+
+class PairUniformRoadmap(RoadmapDistribution) :
     def __init__(self, roadmap, length_attr='length' ) :
-        self.roadmap = roadmap
-        self.length_attr = length_attr
+        super(PairUniformRoadmap,self).__init__(roadmap, length_attr)
         
-        self.distr = roadprob.UniformDist( self.roadmap, length_attr )
+        uniform = roadprob.UniformDist( self.roadmap, self.length_attr )
+        self.distr = uniform
         
-        # compute these
-        self._meancarry = None
-        self._meanfetch = None
+        # compute these --- using roadmap movers complexity
+        lendict = { road : data.get( self.length_attr, 1 )
+                   for _,__, road, data in self.roadmap.edges_iter( keys=True, data=True )
+                   }
+        total = sum( lendict.values() )
+        W = { road : roadlen / total
+                   for road, roadlen in lendict.iteritems() }
+        
+        W2 = { (r1,r2) : w1*w2
+              for r1,w1 in W.iteritems()
+              for r2,w2 in W.iteritems() }
+        
+        self._meancarry = roadEd.roadEd( self.roadmap, W2, length_attr=self.length_attr )
+        
+        self._meanfetch = 0.
         
         
     def sample(self) :
@@ -47,15 +78,28 @@ class PairUniformRoadmap(Distribution) :
     
     def meanfetch(self) : return self._meanfetch
     
-    def queueLengthFactor(self, rho ) :
-        return np.power( 1 - rho, -2. )     # presumably...
     
-    def origin(self) :
-        _,__, road = self.roadmap.edges_iter( data=True ).next()
-        return ROAD.RoadAddress( road, 0. )
     
-    def distance(self, x, y ) :
-        return ROAD.distance( self.roadmap, x, y, length=self.length_attr )
+__all__ = [
+           'RoadmapDistribution',
+           'ACC2014Square',
+           'PairUniformRoadmap',
+           'ACC2014Distr',
+           ]
+    
+    
+    
+if __name__ == '__main__' :
+    pass
+    
+    
+    
+    
+    
+    
+    
+    
+    
     
     
     
