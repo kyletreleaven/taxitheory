@@ -1,3 +1,11 @@
+
+# compiled python... obviously
 *.pyc
 
+# anything in data directory
 data/*
+# sqlite database (output) files
+*.sqlite
+
+# setuptools install tree
+taxitheory.egg-info/*
