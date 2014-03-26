@@ -16,5 +16,5 @@ from setiptah.taxitheory.roadmap.distributions import *
 
 roadmap = ACC2014Square()
 distributions['PairUniformSquareNet'] = PairUniformRoadmap(roadmap)
-
+distributions['ACC2014'] = ACC2014Distr()
 
