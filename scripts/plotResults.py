@@ -1,21 +1,21 @@
 #!/usr/bin/python
 from PyQt4 import QtGui as gui, QtCore as core
 
-import matplotlib.pyplot as plt
+
 import setiptah.taxitheory.gui.mplcanvas as mplcanvas
 
 # simulation components
-from setiptah.eventsim.signaling import Signal
-from setiptah.eventsim.simulation import Simulation
-from setiptah.queuesim.sources import PoissonClock, UniformClock
-from setiptah.dyvehr.euclidean import EuclideanPlanner
+#from setiptah.eventsim.signaling import Signal
+#from setiptah.eventsim.simulation import Simulation
+#from setiptah.queuesim.sources import PoissonClock, UniformClock
+#from setiptah.dyvehr.euclidean import EuclideanPlanner
 #
-from setiptah.dyvehr.taxi import Taxi, GatedTaxiDispatch
-from setiptah.dyvehr.taxi import RoundRobinScheduler, kCraneScheduler
+#from setiptah.dyvehr.taxi import Taxi, GatedTaxiDispatch
+#from setiptah.dyvehr.taxi import RoundRobinScheduler, kCraneScheduler
 
-import setiptah.taxitheory.euclidean.distributions as distribs
 
-import setiptah.taxitheory.db.sql as experimentdb
+
+
 
 
 # some globals
@@ -58,6 +58,7 @@ if __name__ == '__main__' :
     args, unknown_args = parser.parse_known_args()
     
     
+    import setiptah.taxitheory.db.sql as experimentdb
     db = experimentdb.ExperimentDatabase( args.dbfile )
     
     INCLUDE = [ e for e in db.experimentsIter()
@@ -66,6 +67,7 @@ if __name__ == '__main__' :
                and e.vehspeed == args.vehspeed ]
     #eiter = db.experimentsIter()
     
+    import setiptah.taxitheory.distributions as distribs
     distr = distribs.distributions[ args.distr ]
     
     mult = distr.meanfetch() + distr.meancarry()

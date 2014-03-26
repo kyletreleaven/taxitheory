@@ -8,12 +8,17 @@ import setiptah.taxitheory.gui.mplcanvas as mplcanvas
 from setiptah.eventsim.signaling import Signal
 from setiptah.eventsim.simulation import Simulation
 from setiptah.queuesim.sources import PoissonClock, UniformClock
-from setiptah.dyvehr.euclidean import EuclideanPlanner
-#
+
 from setiptah.dyvehr.taxi import Taxi, GatedTaxiDispatch
 from setiptah.dyvehr.taxi import RoundRobinScheduler, kCraneScheduler
 
+from setiptah.dyvehr.euclidean import EuclideanPlanner
+# going to need roadmap planner/trajectory... I think I have these somewhere...
+from setiptah.roadgeometry.roadmap_paths import RoadmapPlanner
+
 import setiptah.taxitheory.distributions as distribs
+from setiptah.taxitheory.euclidean.distributions import EuclideanDistribution
+from setiptah.taxitheory.roadmap.distributions import RoadmapDistribution
 
 import setiptah.taxitheory.db.sql as experimentdb
 
@@ -38,37 +43,27 @@ class SIMULATION :
         
         # prepare domain planning
         distr = distribs.distributions[ experiment.distrib_key ]
-        planner = EuclideanPlanner
+        
+        # for a moment, hard-code:
+        if isinstance( distr, EuclideanDistribution ) :
+            planner = EuclideanPlanner
+            
+        elif isinstance( distr, RoadmapDistribution ) :
+            planner = RoadmapPlanner( distr.roadmap )
+            
+        else :
+            raise NotImplementedError('unrecognized distribution')
+        
+        
         
         # prepare domain Stacker Crane scheduling --- could be made dynamic
         # cuz i'm dumb...
         getTail = lambda dem : dem.origin
         getHead = lambda dem : dem.destination
+        
         scheduler = kCraneScheduler( getTail, getHead, distr.distance )
         
-        # prepare geometry queries
-        if True :
-            pass
-        else :
-            import setiptah.roadgeometry.roadmap_basic as ROAD
-            import setiptah.roadgeometry.probability as roadprob
-            from setiptah.roadgeometry.roadmap_paths import RoadmapPlanner
-            
-            roadmap = roadprob.sampleroadnet()
-            U = roadprob.UniformDist( roadmap )
-            samplepoint = U.sample
-            
-            ORIGIN = samplepoint()
-            
-            distance = lambda x, y : ROAD.distance( roadmap, 
-                                                    x, y, weight='length' )
-            planner = RoadmapPlanner( roadmap )
-            
-            if True :
-                scheduler = RoundRobinScheduler()
-            else :
-                scheduler = kCraneScheduler( getTail, getHead, distance )
-                
+        
         # instantiate the gate
         gate = GatedTaxiDispatch()
         gate.setScheduler( scheduler )
