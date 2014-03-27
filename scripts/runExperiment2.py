@@ -44,24 +44,29 @@ class SIMULATION :
         # prepare domain planning
         distr = distribs.distributions[ experiment.distrib_key ]
         
-        # for a moment, hard-code:
-        if isinstance( distr, EuclideanDistribution ) :
-            planner = EuclideanPlanner
-            
-        elif isinstance( distr, RoadmapDistribution ) :
-            planner = RoadmapPlanner( distr.roadmap )
-            
-        else :
-            raise NotImplementedError('unrecognized distribution')
-        
-        
-        
         # prepare domain Stacker Crane scheduling --- could be made dynamic
         # cuz i'm dumb...
         getTail = lambda dem : dem.origin
         getHead = lambda dem : dem.destination
         
-        scheduler = kCraneScheduler( getTail, getHead, distr.distance )
+        
+        
+        # for a moment, hard-code:
+        if isinstance( distr, EuclideanDistribution ) :
+            planner = EuclideanPlanner
+            
+            scheduler = kCraneScheduler( getTail, getHead, distr.distance )
+            
+        elif isinstance( distr, RoadmapDistribution ) :
+            planner = RoadmapPlanner( distr.roadmap )
+            
+            from setiptah.taxitheory.roadmap.simulation import RoadMap_kCraneScheduler
+            scheduler = RoadMap_kCraneScheduler( getTail, getHead, distr.roadmap )
+            
+        else :
+            raise NotImplementedError('unrecognized distribution')
+        
+        
         
         
         # instantiate the gate
