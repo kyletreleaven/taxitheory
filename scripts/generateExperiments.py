@@ -22,6 +22,8 @@ if __name__ == '__main__' :
     
     parser.add_argument( '--phasedil', type=float, default=2. )
     
+    parser.add_argument( '--linterp', action='store_true' )
+    
     # etc...
     INITDUR = 50.
     #TIMEFACTOR = 2.
@@ -40,8 +42,11 @@ if __name__ == '__main__' :
     import setiptah.taxitheory.distributions as distribs
     distr = distribs.distributions[ args.distr ]
     
-    G = np.logspace( np.log10( args.ordermin ), np.log10( args.ordermax ),
-                     args.N )
+    if args.linterp :
+        G = np.linspace( args.ordermin, args.ordermax, args.N )
+    else :
+        G = np.logspace( np.log10( args.ordermin ), np.log10( args.ordermax ),
+                         args.N )
     
     RHO = [ distr.inverseQueueLengthFactor(g) for g in G ]
     
