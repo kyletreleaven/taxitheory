@@ -148,6 +148,8 @@ class SIMULATION :
         MINBATCH = 20.
         CYCLESPERBATCH = 10.
         CEILINGRATIO = 1.01
+        #
+        ALPHA = .01
         QUOTA = 20
         # just *assume* we will not simulate above stability!!!
         # XTHRESH = 200       # this needs to be added!!!
@@ -193,7 +195,8 @@ class SIMULATION :
             else :
                 # branch based on globalmean, but quota in a row
                 globalmean_next = np.mean( self.alive_tape )
-                if globalmean_next <= CEILINGRATIO * globalmean :
+                #if globalmean_next <= CEILINGRATIO * globalmean :
+                if np.abs( globalmean_next - globalmean ) <= ALPHA * globalmean :
                     quota -= 1
                 else :
                     quota = QUOTA
