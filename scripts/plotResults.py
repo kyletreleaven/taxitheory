@@ -57,7 +57,8 @@ if __name__ == '__main__' :
     
     parser.add_argument( '--warp', type=float, default=None )
     parser.add_argument( '--warpnum', type=int, default=5 )
-
+    
+    parser.add_argument( '--fit', action='store_true' )
     
     args, unknown_args = parser.parse_known_args()
     
@@ -80,6 +81,7 @@ if __name__ == '__main__' :
     
     utils = [ mcplx_star * e.arrivalrate for e in INCLUDE ]
     orders = [ distr.queueLengthFactor(rho) for rho in utils ]
+    orders = [ float(o) for o in orders ]
     
     def computeAverageSystemTime( e ) :
         demands = db.demandsIter( e.uniqueID )
@@ -93,6 +95,19 @@ if __name__ == '__main__' :
     
     if True :       # show lines
         plt.scatter( orders, meansys )
+        if args.fit :
+            import scipy.stats as stats
+            
+            print zip( orders, meansys )
+            print stats.linregress( orders, meansys )
+            
+            slope, intercept, r_value, _, __ = stats.linregress( orders, meansys )
+            fit = [ intercept + slope*o for o in orders ]
+            plt.plot( orders, fit, '--' )
+            
+            print 'slope: %.3f' % slope
+            print 'intercept: %.3f' % intercept
+            print 'r-value: %.3f' % r_value
         
         if not args.nonum :
             for x,y,label in zip( orders, meansys, labels ) :
@@ -114,7 +129,7 @@ if __name__ == '__main__' :
             utils_alt = [ mult * e.arrivalrate for e in INCLUDE ]   # *actual* utilization
             orders_alt = [ distr.queueLengthFactor(rho) for rho in utils_alt ]
             
-            print orders_alt
+            #print orders_alt
             
             for c in bounds.itervalues() :
                 line = [ c * x for x in orders_alt ]
