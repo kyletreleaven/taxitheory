@@ -55,6 +55,10 @@ if __name__ == '__main__' :
     parser.add_argument( '--vehspeed', type=float, default=1. )
     parser.add_argument( '--nonum', action='store_true' )
     
+    parser.add_argument( '--warp', type=float, default=None )
+    parser.add_argument( '--warpnum', type=int, default=5 )
+
+    
     args, unknown_args = parser.parse_known_args()
     
     
@@ -70,11 +74,11 @@ if __name__ == '__main__' :
     import setiptah.taxitheory.distributions as distribs
     distr = distribs.distributions[ args.distr ]
     
-    mult = distr.meanfetch() + distr.meancarry()
-    mult /= args.numveh
-    mult /= args.vehspeed
+    mcplx_star = distr.meanfetch() + distr.meancarry()
+    mcplx_star /= args.numveh
+    mcplx_star /= args.vehspeed
     
-    utils = [ mult * e.arrivalrate for e in INCLUDE ]
+    utils = [ mcplx_star * e.arrivalrate for e in INCLUDE ]
     orders = [ distr.queueLengthFactor(rho) for rho in utils ]
     
     def computeAverageSystemTime( e ) :
@@ -98,11 +102,24 @@ if __name__ == '__main__' :
                               #bbox = dict(boxstyle = 'round,pad=0.5', fc = 'yellow', alpha = 0.5),
                               #arrowprops = dict(arrowstyle = '->', connectionstyle = 'arc3,rad=0'))
                               )
+                
+        # now, draw bounds, with warping
+        MCPLX = [ mcplx_star ]
+        if args.warp is not None :
+            alpha = args.warp
+            MCPLX.extend( mcplx_star * np.linspace( 1+alpha, 1-alpha, args.warpnum ) )
             
         bounds = distr.boundConstants()
-        for c in bounds.itervalues() :
-            line = [ c * x for x in orders ]
-            plt.plot( orders, line, '--' )
+        for mult in MCPLX :
+            utils_alt = [ mult * e.arrivalrate for e in INCLUDE ]   # *actual* utilization
+            orders_alt = [ distr.queueLengthFactor(rho) for rho in utils_alt ]
+            
+            print orders_alt
+            
+            for c in bounds.itervalues() :
+                line = [ c * x for x in orders_alt ]
+                plt.plot( orders, line, '--' )
+            
             
     else :          # show levels
         plt.scatter( orders, [ st / n for n, st in zip( orders, meansys ) ] )
