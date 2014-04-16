@@ -1,10 +1,7 @@
 #!/usr/bin/python
 
 import itertools
-
 import numpy as np
-
-import setiptah.taxitheory.euclidean.distributions as distribs
 
 
 if __name__ == '__main__' :
@@ -14,7 +11,8 @@ if __name__ == '__main__' :
     parser = argparse.ArgumentParser()
     parser.add_argument( 'distrib_key', type=str ) #, default='PairUniform2' )
     args = parser.parse_args()
-    
+
+    import setiptah.taxitheory.distributions as distribs
     distr = distribs.distributions[ args.distrib_key ]
     
     total = 0.
