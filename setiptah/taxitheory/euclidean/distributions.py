@@ -235,12 +235,31 @@ class XO_X_O(CubicDistribution) :
         
     def meancarry(self) :
         return 3.205        # Monte Carlo
+        # return 3.2        # another trial
         
     def meanfetch(self) :
         return .5 * 4.
     
     def boundConstants(self) :
-        return {}       # for now
+        """ only upper bounds are valid """
+        """
+        Stacker Crane policy upper bound
+        """
+        UBConst = eucconst.BETAMATCH3
+        moverscplx = self.meancarry() + self.meanfetch()
+        
+        pow = lambda a,d : np.power(a,d)
+        
+        # see thesis, special bounds appendix
+        integral_fair_optimistic = pow( 1./2, 2./3 )
+        integral_fair = 2. * integral_fair_optimistic
+        
+        bounds = {}
+        bounds['upper'] = pow( UBConst * integral_fair, 3. ) / pow( moverscplx, 2. )
+        bounds['upper conjecture'] = pow( UBConst * integral_fair_optimistic, 3. ) / pow( moverscplx, 2. )
+        
+        #bounds = {}
+        return bounds
         
         
         
