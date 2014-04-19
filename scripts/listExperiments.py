@@ -1,6 +1,5 @@
 #!/usr/bin/python
 
-import prettytable as pT
 
 
 
@@ -8,12 +7,6 @@ import prettytable as pT
 if __name__ == '__main__' :
     import sys
     import argparse
-    
-    import numpy as np
-    
-    
-    import setiptah.taxitheory.db.sql as experimentdb
-    from setiptah.taxitheory.db import ExperimentRecord
     
     
     parser = argparse.ArgumentParser()
@@ -24,21 +17,36 @@ if __name__ == '__main__' :
     """ start script """
     args, unknown_args = parser.parse_known_args()
     
+    import prettytable as pT
     cols = [ 'ID', 'Status',
             'Arrival Rate', 'Fleet Size', 'Fleet Speed',
             'Distrib',
-            'Init Dur', 'Phase Dilat', 'Growth Tresh', 'Exploit' ]
+            '\\rho',
+            'O' ]
     table = pT.PrettyTable( cols )
+    table.float_format = '.5'
     
     # populate table
-    db = experimentdb.ExperimentDatabase( args.dbfile )
     STATUS = { None : 'BLANK', 1 : 'SIMULATED', 2 : 'CORRUPT' }
     
+    import setiptah.taxitheory.db.sql as experimentdb
+    from setiptah.taxitheory.db import ExperimentRecord
+    db = experimentdb.ExperimentDatabase( args.dbfile )
+    
+    import numpy as np
+    import setiptah.taxitheory.distributions as distribs
+    
     for e in db.experimentsIter() :
+        distr = distribs.distributions[ e.distrib_key ]
+        mcplx = distr.meanfetch() + distr.meancarry()
+        rho = e.arrivalrate * mcplx / e.numveh / e.vehspeed
+        t = distr.queueLengthFactor(rho)
+        
         row = [ e.uniqueID, None,
                e.arrivalrate, e.numveh, e.vehspeed,
                e.distrib_key,
-               e.init_dur, e.time_factor, e.thresh_factor, e.exploit_ratio ]
+               #e.init_dur, e.time_factor, e.thresh_factor, e.exploit_ratio
+               rho, t ]
         
         row[1] = STATUS[e.status]
         
