@@ -1,7 +1,7 @@
 #!/usr/bin/python
 from PyQt4 import QtGui as gui, QtCore as core
 
-import setiptah.taxitheory.euclidean.distributions as distribs
+import setiptah.taxitheory.distributions as distribs
 
 
 # some globals
