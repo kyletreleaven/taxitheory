@@ -56,15 +56,13 @@ if __name__ == '__main__' :
     
     parser.add_argument( '--nonum', action='store_true' )
     parser.add_argument( '--nobound', action='store_true' )
-    
-    parser.add_argument( '--warp', type=float, default=None )
-    parser.add_argument( '--warpnum', type=int, default=5 )
-    
     parser.add_argument( '--fit', action='store_true' )
-    #parser.add_argument( '--fitwarp', action='store_true' )
+    
+    parser.add_argument( '--warp', nargs=3, default=None )
+    
     
     args, unknown_args = parser.parse_known_args()
-    
+    FLAGS = data()
     
     import setiptah.taxitheory.db.sql as experimentdb
     db = experimentdb.ExperimentDatabase( args.dbfile )
@@ -73,19 +71,29 @@ if __name__ == '__main__' :
                if e.distrib_key == args.distr
                and e.numveh == args.numveh
                and e.vehspeed == args.vehspeed ]
-    #eiter = db.experimentsIter()
     
     import setiptah.taxitheory.distributions as distribs
     distr = distribs.distributions[ args.distr ]
     
     mcplx_star = distr.meanfetch() + distr.meancarry()
-    mcplx_star /= args.numveh
-    mcplx_star /= args.vehspeed
     
-    utils = [ mcplx_star * e.arrivalrate for e in INCLUDE ]
+    # obtain "orders"
+    stime = float( mcplx_star ) / args.vehspeed
+    utils = [ e.arrivalrate * stime / args.numveh
+             for e in INCLUDE ]
     orders = [ distr.queueLengthFactor(rho) for rho in utils ]
     orders = [ float(o) for o in orders ]
     
+    # parse warp options
+    if args.warp is not None :
+        warp_mode = args.warp[0]
+        warp_alpha = float( args.warp[1] )
+        warp_num = int( args.warp[2] )
+        
+        warp_factors = np.linspace( 1+warp_alpha, 1-warp_alpha, warp_num )
+        
+        
+    # crunch data...
     def computeAverageSystemTime( e ) :
         demands = db.demandsIter( e.uniqueID )
         
@@ -95,6 +103,8 @@ if __name__ == '__main__' :
     
     meansys = [ computeAverageSystemTime(e) for e in INCLUDE ]
     labels = [ e.uniqueID for e in INCLUDE ]
+    
+    
     
     if True :
         
@@ -116,6 +126,21 @@ if __name__ == '__main__' :
             print 'intercept: %.3f' % intercept
             print 'r-value: %.3f' % r_value
             
+            if args.warp is not None and warp_mode == 'fit' :
+                for alpha in warp_factors :
+                    utils_alt = [ alpha * rho for rho in utils ]
+                    orders_alt = [ distr.queueLengthFactor(rho) for rho in utils_alt ]
+                    
+                    plt.plot( orders_alt, fit, '--' )
+                    
+                    delta_str = '%.3f' % ( alpha - 1. )
+                    alpha_str = '%.3f' % alpha
+                    plt.annotate( alpha_str, xy = ( orders_alt[-1], fit[-1] ),
+                                  xytext = (-5, 5 ),
+                                  textcoords = 'offset points', ha='right', va='bottom' )
+                    
+                    
+                    
         if not args.nonum :
             for x,y,label in zip( orders, meansys, labels ) :
                 plt.annotate( label,
@@ -130,26 +155,27 @@ if __name__ == '__main__' :
             bounds = {}
         else :
             bounds = distr.boundConstants()
-        
-        # obtain range of mistake complexities
-        MCPLX = [ mcplx_star ]
-        if args.warp is not None :
-            alpha = args.warp
-            MCPLX.extend( mcplx_star * np.linspace( 1+alpha, 1-alpha, args.warpnum ) )
+        # show the bounds (warped?)
+        for c in bounds.itervalues() :
+            # bound const only accounts for universals and mcplx
+            cc = c / args.numveh / args.vehspeed
+            line = [ cc * x for x in orders ]
+            plt.plot( orders, line, '--' )
             
-        for mult in MCPLX :
-            utils_alt = [ mult * e.arrivalrate for e in INCLUDE ]   # *actual* utilization
-            orders_alt = [ distr.queueLengthFactor(rho) for rho in utils_alt ]
+            if args.warp is not None and warp_mode == 'bounds' :
+                for alpha in warp_factors :
+                    utils_alt = [ alpha * rho for rho in utils ]
+                    orders_alt = [ distr.queueLengthFactor(rho) for rho in utils_alt ]
+                    line = [ cc * x for x in orders_alt ]
+                    
+                    plt.plot( orders, line, '--' )
+                    
+                    delta_str = '%.3f' % ( alpha - 1. )
+                    alpha_str = '%.3f' % alpha
+                    plt.annotate( alpha_str, xy = ( orders[-1], line[-1] ),
+                                  xytext = (-5, 5 ),
+                                  textcoords = 'offset points', ha='right', va='bottom' )
             
-            # show the trend? warped?
-            if args.fit :
-                line = [ intercept + slope * x for x in orders ]
-                plt.plot( orders_alt, line, '--' )
-            
-            # show the bounds (warped?)
-            for c in bounds.itervalues() :
-                line = [ c * x for x in orders ]
-                plt.plot( orders_alt, line, '--' )
             
             
     else :          # show levels
