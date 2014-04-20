@@ -213,7 +213,7 @@ class Cocentric3_1_2(CubicDistribution) :
         
         bounds = {}
         bounds['upper'] = pow( UBConst * integral_fair, 3. ) / pow( moverscplx, 2. )
-        bounds['upper conjecture'] = pow( UBConst * integral_fair_optimistic, 3. ) / pow( moverscplx, 2. )
+        #bounds['upper conjecture'] = pow( UBConst * integral_fair_optimistic, 3. ) / pow( moverscplx, 2. )
         
         #bounds = {}
         return bounds
@@ -246,6 +246,8 @@ class XO_X_O(CubicDistribution) :
         Stacker Crane policy upper bound
         """
         UBConst = eucconst.BETAMATCH3
+        #UBConst += eucconst.BETATSP3        # does this shift the bound?
+        
         moverscplx = self.meancarry() + self.meanfetch()
         
         pow = lambda a,d : np.power(a,d)
@@ -256,7 +258,7 @@ class XO_X_O(CubicDistribution) :
         
         bounds = {}
         bounds['upper'] = pow( UBConst * integral_fair, 3. ) / pow( moverscplx, 2. )
-        bounds['upper conjecture'] = pow( UBConst * integral_fair_optimistic, 3. ) / pow( moverscplx, 2. )
+        #bounds['upper conjecture'] = pow( UBConst * integral_fair_optimistic, 3. ) / pow( moverscplx, 2. )
         
         #bounds = {}
         return bounds
