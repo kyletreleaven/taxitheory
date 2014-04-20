@@ -51,22 +51,27 @@ class SIMULATION :
         
         
         
-        # for a moment, hard-code:
+        # instantiate planner
         if isinstance( distr, EuclideanDistribution ) :
             planner = EuclideanPlanner
-            
-            scheduler = kCraneScheduler( getTail, getHead, distr.distance )
             
         elif isinstance( distr, RoadmapDistribution ) :
             planner = RoadmapPlanner( distr.roadmap )
             
+        else :
+            raise NotImplementedError('unrecognized distribution')
+        
+        # instantiate scheduler
+        if False or isinstance( distr, EuclideanDistribution ) :
+            scheduler = kCraneScheduler( getTail, getHead, distr.distance )
+            
+        elif isinstance( distr, RoadmapDistribution ) :
             from setiptah.taxitheory.roadmap.simulation import RoadMap_kCraneScheduler
             scheduler = RoadMap_kCraneScheduler( getTail, getHead, distr.roadmap )
             
         else :
             raise NotImplementedError('unrecognized distribution')
-        
-        
+                
         
         
         # instantiate the gate
