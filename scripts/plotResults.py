@@ -15,6 +15,28 @@ import setiptah.taxitheory.gui.mplcanvas as mplcanvas
 
 
 
+def parseints( inputstr ) :
+    selection = set()
+    invalid = set()
+    
+    tokens = inputstr.split(',')
+    for i in tokens :
+        try :
+            selection.add( int(i) )
+        
+        except :
+            try :
+                token = [ int( k.strip() ) for k in i.split('-') ]
+                assert len( token ) == 2
+                
+                selection.update( xrange( token[0], token[1] + 1 ) )
+            
+            except :
+                invalid.add( i )
+                
+    if len( invalid ) > 0 : print invalid
+    return selection
+
 
 
 
@@ -37,6 +59,10 @@ if __name__ == '__main__' :
         #mpl.rcParams['pdf.use14corefonts'] = True
         #mpl.rcParams['text.usetex'] = True
         
+        dim = [ 8., 6. ]
+        dim = mpl.rcParams['figure.figsize']
+        mpl.rcParams['figure.figsize'] = tuple( [ 1.4 * d for d in dim ] )
+
         font = {
                 #'family' : 'normal',
                 #'weight' : 'bold',
@@ -56,7 +82,7 @@ if __name__ == '__main__' :
     
     parser.add_argument( '--nonum', action='store_true' )
     parser.add_argument( '--nobound', action='store_true' )
-    parser.add_argument( '--fit', action='store_true' )
+    parser.add_argument( '--fit', nargs='?', const='all', default=None )
     
     parser.add_argument( '--warp', nargs=3, default=None )
     
@@ -87,6 +113,9 @@ if __name__ == '__main__' :
     # parse warp options
     if args.warp is not None :
         warp_mode = args.warp[0]
+        if warp_mode not in [ 'fit', 'bounds' ] :
+            print 'warp modes are "fit" and "bounds"'
+        
         warp_alpha = float( args.warp[1] )
         warp_num = int( args.warp[2] )
         
@@ -112,13 +141,24 @@ if __name__ == '__main__' :
         plt.scatter( orders, meansys )
         
         # find a trend line for the results?
-        if args.fit :
+        if args.fit is not None :
+            # selective fitting?
+            if args.fit == 'all' :
+                indices = range( len( orders ) )
+            else :
+                active = parseints( args.fit )
+                indices = [ k for k, e in enumerate(INCLUDE) if e.uniqueID in active ]
+            #
+            orders_active = [ orders[k] for k in indices ]
+            meansys_active = [ meansys[k] for k in indices ]
+            
+            
             import scipy.stats as stats
+            #print zip( orders, meansys )
+            #print stats.linregress( orders, meansys )
+            slope, intercept, r_value, _, __ = stats.linregress( orders_active, meansys_active )
             
-            print zip( orders, meansys )
-            print stats.linregress( orders, meansys )
-            
-            slope, intercept, r_value, _, __ = stats.linregress( orders, meansys )
+            # plot the fit
             fit = [ intercept + slope*o for o in orders ]
             plt.plot( orders, fit, '--' )
             
@@ -223,10 +263,6 @@ if __name__ == '__main__' :
         plt.xlabel( xlabel )
         
     plt.show()
-    
-    
-    
-    
     
     
     
