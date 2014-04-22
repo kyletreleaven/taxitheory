@@ -57,6 +57,7 @@ if __name__ == '__main__' :
     
     parser.add_argument( '--nonum', action='store_true' )
     parser.add_argument( '--nobound', action='store_true' )
+    parser.add_argument( '--loglog', action='store_true' )
     
     #parser.add_argument( '--fit', action='store_true' )     # we'll fill this in later
     
@@ -94,6 +95,12 @@ if __name__ == '__main__' :
     if True :
         # show lines
         plt.scatter( SIZES, meansys )
+        
+        if args.loglog :
+            ax = plt.gca()
+            ax.set_xscale('log')
+            ax.set_yscale('log')
+            plt.grid(True,which='both')
         
         # find a trend line for the results?
         if False and args.fit :
