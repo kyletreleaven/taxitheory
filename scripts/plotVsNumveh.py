@@ -35,6 +35,10 @@ if __name__ == '__main__' :
         #mpl.rcParams['pdf.use14corefonts'] = True
         #mpl.rcParams['text.usetex'] = True
         
+        dim = [ 8., 6. ]
+        dim = mpl.rcParams['figure.figsize']
+        mpl.rcParams['figure.figsize'] = tuple( [ 1.4 * d for d in dim ] )
+        
         font = {
                 #'family' : 'normal',
                 #'weight' : 'bold',
@@ -49,16 +53,12 @@ if __name__ == '__main__' :
     
     # fixed variables
     parser.add_argument( 'distr', type=str, default='PairUniform2' )
-    #parser.add_argument( '--numveh', type=int, default=1 )
     parser.add_argument( '--vehspeed', type=float, default=1. )
     
     parser.add_argument( '--nonum', action='store_true' )
     parser.add_argument( '--nobound', action='store_true' )
     
-    #parser.add_argument( '--warp', type=float, default=None )
-    #parser.add_argument( '--warpnum', type=int, default=5 )
-    
-    parser.add_argument( '--fit', action='store_true' )     # we'll fill this in later
+    #parser.add_argument( '--fit', action='store_true' )     # we'll fill this in later
     
     
     args, unknown_args = parser.parse_known_args()
@@ -86,27 +86,27 @@ if __name__ == '__main__' :
         return np.mean( systimes )
     
     meansys = [ computeAverageSystemTime(e) for e in INCLUDE ]
-    labels = [ e.uniqueID for e in INCLUDE ]
+    if args.nonum :
+        labels = SIZES
+    else :
+        labels = [ e.uniqueID for e in INCLUDE ]
     
     if True :
-        
         # show lines
         plt.scatter( SIZES, meansys )
         
         # find a trend line for the results?
-        if args.fit :
+        if False and args.fit :
             import scipy.stats as stats
-            
             pass
-            
-        if not args.nonum :
-            for x,y,label in zip( SIZES, meansys, labels ) :
-                plt.annotate( label,
-                              xy = (x, y), xytext = (-5, 5),
-                              textcoords = 'offset points', ha = 'right', va = 'bottom',
-                              #bbox = dict(boxstyle = 'round,pad=0.5', fc = 'yellow', alpha = 0.5),
-                              #arrowprops = dict(arrowstyle = '->', connectionstyle = 'arc3,rad=0'))
-                              )
+        
+        for x,y,label in zip( SIZES, meansys, labels ) :
+            plt.annotate( label,
+                          xy = (x, y), xytext = (-5, 5),
+                          textcoords = 'offset points', ha = 'right', va = 'bottom',
+                          #bbox = dict(boxstyle = 'round,pad=0.5', fc = 'yellow', alpha = 0.5),
+                          #arrowprops = dict(arrowstyle = '->', connectionstyle = 'arc3,rad=0'))
+                          )
                 
         # now, draw lines (bounds + fit?), with warping?
         if args.nobound :
@@ -120,16 +120,16 @@ if __name__ == '__main__' :
         rho = e0.arrivalrate * mcplx_star / e0.numveh / e0.vehspeed
         order_star = distr.queueLengthFactor(rho)
         
-        # show the trend? warped?
-        if args.fit :
-            pass    # later
-        
-        # show the bounds (warped?)
+        # show the bounds
         for c in bounds.itervalues() :
             line = [ c * order_star / numveh / args.vehspeed for numveh in SIZES ]
             plt.plot( SIZES, line, '--' )
         
-            
+        
+        
+        
+        
+        
     else :          # show levels
         pass
     
