@@ -53,7 +53,9 @@ if __name__ == '__main__' :
     order_parser.add_argument( '--numveh', type=int, default=1 )
     # for a range of fleet sizes
     veh_parser = subp.add_parser('vehicles')
-    veh_parser.add_argument( '--torder', type=float, default=100. )
+    veh_parser.add_argument('mode', type=str, choices=[ 'torder', 'norder' ] )
+    veh_parser.add_argument('--order', type=float, default=100. )
+    #veh_parser.add_argument( '--torder', , default=100. )
     veh_parser.add_argument( 'sizes', type=str )
     
     
@@ -125,8 +127,15 @@ if __name__ == '__main__' :
         # method to construct fleet-size range sim
         NUMVEH = sorted( parseints( args.sizes ) )
         
-        ORDERS = [ numveh * args.vehspeed * args.torder for numveh in NUMVEH ]
-        UTILS = [ distr.inverseQueueLengthFactor(o) for o in ORDERS ]
+        if args.mode == 'norder' :
+            NORDERS = [ args.order for numveh in NUMVEH ]
+        elif args.mode == 'torder' :
+            NORDERS = [ args.order * numveh * args.vehspeed for numveh in NUMVEH ]
+        else :
+            raise Exception('wrong.')
+        
+        #ORDERS = [ numveh * args.vehspeed * args.torder for numveh in NUMVEH ]
+        UTILS = [ distr.inverseQueueLengthFactor(o) for o in NORDERS ]
         RATES = [ rho * numveh * args.vehspeed / moverscplx
                  for rho, numveh in zip( UTILS, NUMVEH ) ]
         

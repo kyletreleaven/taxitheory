@@ -22,7 +22,7 @@ if __name__ == '__main__' :
             'Arrival Rate', 'Fleet Size', 'Fleet Speed',
             'Distrib',
             '\\rho',
-            'O' ]
+            'NO', 'TO' ]
     table = pT.PrettyTable( cols )
     table.float_format = '.5'
     
@@ -40,13 +40,14 @@ if __name__ == '__main__' :
         distr = distribs.distributions[ e.distrib_key ]
         mcplx = distr.meanfetch() + distr.meancarry()
         rho = e.arrivalrate * mcplx / e.numveh / e.vehspeed
-        t = distr.queueLengthFactor(rho)
+        NO = distr.queueLengthFactor(rho)
+        TO = NO / e.numveh / e.vehspeed
         
         row = [ e.uniqueID, None,
                e.arrivalrate, e.numveh, e.vehspeed,
                e.distrib_key,
                #e.init_dur, e.time_factor, e.thresh_factor, e.exploit_ratio
-               rho, t ]
+               rho, NO, TO ]
         
         row[1] = STATUS[e.status]
         
